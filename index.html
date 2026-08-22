@@ -6,1259 +6,191 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>टाटा पंच गेट सिमुलेटर</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  :root {
-    --bg:#0a0a0f; --panel:#12121a; --accent:#ff6b00; --accent2:#00d4aa;
-    --text:#e0e0e0; --text2:#888; --danger:#ff4444; --warn:#ffaa00;
-  }
-  html,body {
-    width:100%; height:100%; overflow:hidden; background:var(--bg);
-    font-family:'Segoe UI',system-ui,sans-serif; color:var(--text);
-    touch-action:none;
-  }
-  #cameraFeed {
-    position:fixed; top:0; left:0; width:100%; height:100%;
-    object-fit:cover; z-index:1; background:#000;
-    display:none;
-  }
-  #overlay {
-    position:fixed; top:0; left:0; width:100%; height:100%;
-    z-index:2; pointer-events:none;
-  }
-  #overlay.active { pointer-events:auto; }
-  
-  .panel {
-    position:fixed; z-index:10;
-    background:rgba(18,18,26,0.95);
-    backdrop-filter:blur(12px);
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:16px;
-  }
-  #topBar {
-    top:8px; left:8px; right:8px;
-    padding:10px 14px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  #topBar h1 {
-    font-size:15px; font-weight:700; color:var(--accent);
-    letter-spacing:0.5px;
-  }
-  #topBar .badge {
-    font-size:11px; padding:3px 8px; border-radius:20px;
-    background:rgba(255,107,0,0.15); color:var(--accent);
-    border:1px solid rgba(255,107,0,0.3);
-  }
-  
-  #debugPanel {
-    top:60px; left:8px;
-    padding:10px 14px; font-size:11px;
-    max-width:260px; display:none;
-    line-height:1.6; color:var(--text2);
-  }
-  #debugPanel.show { display:block; }
-  #debugPanel .ok { color:var(--accent2); }
-  #debugPanel .err { color:var(--danger); }
-  
-  #calibrationPanel {
-    top:50%; left:50%; transform:translate(-50%,-50%);
-    width:92%; max-width:380px;
-    padding:20px; text-align:center;
-    display:none;
-  }
-  #calibrationPanel.show { display:block; }
-  #calibrationPanel h2 { font-size:18px; margin-bottom:8px; color:var(--accent); }
-  #calibrationPanel p { font-size:13px; color:var(--text2); margin-bottom:14px; }
-  .gate-input {
-    display:flex; gap:8px; align-items:center; justify-content:center;
-    margin:10px 0; flex-wrap:wrap;
-  }
-  .gate-input input {
-    background:rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.12);
-    color:var(--text); padding:10px 12px; border-radius:10px;
-    width:85px; font-size:15px; text-align:center;
-  }
-  .gate-input .unit { color:var(--text2); font-size:12px; }
-  
-  .mode-tabs {
-    display:flex; gap:4px; background:rgba(255,255,255,0.04);
-    padding:4px; border-radius:10px; margin:10px 0;
-  }
-  .mode-tab {
-    flex:1; text-align:center; padding:8px; font-size:12px;
-    border-radius:8px; cursor:pointer; color:var(--text2);
-  }
-  .mode-tab.active { background:rgba(255,107,0,0.2); color:var(--accent); font-weight:600; }
-  
-  #instructionToast {
-    top:90px; left:50%; transform:translateX(-50%);
-    padding:10px 18px; font-size:13px; font-weight:600;
-    background:rgba(0,212,170,0.15); color:var(--accent2);
-    border:1px solid rgba(0,212,170,0.3);
-    display:none; white-space:nowrap;
-  }
-  #instructionToast.show { display:block; }
-  
-  #controls {
-    bottom:8px; left:8px; right:8px;
-    padding:10px;
-    display:none; flex-direction:column; gap:8px;
-  }
-  .control-row {
-    display:flex; gap:6px; align-items:center; flex-wrap:wrap;
-    justify-content:center;
-  }
-  .btn {
-    background:rgba(255,255,255,0.06);
-    border:1px solid rgba(255,255,255,0.1);
-    color:var(--text); padding:9px 12px; border-radius:12px;
-    font-size:12px; font-weight:600; cursor:pointer;
-    display:flex; align-items:center; gap:4px;
-    transition:all 0.2s; min-height:42px; flex:1; justify-content:center;
-    min-width:60px; border:none;
-  }
-  .btn:active { transform:scale(0.96); background:rgba(255,255,255,0.1); }
-  .btn.primary { background:var(--accent); color:#fff; }
-  .btn.danger { background:rgba(255,68,68,0.15); color:var(--danger); border:1px solid rgba(255,68,68,0.3); }
-  .btn.success { background:rgba(0,212,170,0.15); color:var(--accent2); border:1px solid rgba(0,212,170,0.3); }
-  
-  .slider-group {
-    display:flex; align-items:center; gap:8px;
-    background:rgba(255,255,255,0.04);
-    padding:8px 12px; border-radius:12px; flex:1; min-width:200px;
-  }
-  .slider-group label { font-size:11px; color:var(--text2); white-space:nowrap; }
-  .slider-group input[type=range] { flex:1; accent-color:var(--accent); }
-  .slider-group .val { font-size:12px; font-weight:700; min-width:36px; text-align:right; color:var(--accent); }
-  
-  #infoStrip {
-    display:none;
-    background:rgba(0,0,0,0.7);
-    padding:8px 8px; border-radius:10px;
-    font-size:11px; gap:8px; justify-content:center; flex-wrap:wrap;
-  }
-  #infoStrip.show { display:flex; }
-  .info-item { text-align:center; min-width:50px; }
-  .info-item .num { font-size:14px; font-weight:700; color:var(--accent); }
-  .info-item .lbl { font-size:9px; color:var(--text2); text-transform:uppercase; letter-spacing:0.3px; }
-  .info-item .num.danger { color:var(--danger); }
-  .info-item .num.warn { color:var(--warn); }
-  .info-item .num.ok { color:var(--accent2); }
-  
-  #rampPanel {
-    bottom:290px; left:8px; right:8px;
-    padding:14px; display:none; max-height:240px; overflow-y:auto;
-  }
-  #rampPanel.show { display:block; }
-  #rampPanel h3 { font-size:14px; margin-bottom:10px; color:var(--warn); }
-  .ramp-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
-  .ramp-row label { font-size:12px; color:var(--text2); width:120px; }
-  .ramp-row input { flex:1; }
-  .ramp-row .val { min-width:55px; text-align:right; font-size:12px; color:var(--accent); }
-  
-  #warningBanner {
-    top:45%; left:50%; transform:translate(-50%,-50%);
-    padding:16px 24px; font-size:15px; font-weight:700;
-    background:rgba(255,68,68,0.92); color:#fff;
-    border-radius:16px; display:none; text-align:center; z-index:20; max-width:90%;
-    line-height:1.5;
-  }
-  #warningBanner.show { display:block; }
-  
-  #startScreen {
-    position:fixed; inset:0; z-index:100;
-    background:var(--bg);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:24px; text-align:center;
-  }
-  #startScreen h1 { font-size:24px; color:var(--accent); margin-bottom:6px; }
-  #startScreen h2 { font-size:12px; color:var(--text2); margin-bottom:24px; font-weight:400; line-height:1.5; }
-  .start-btn {
-    background:var(--accent); color:#fff; border:none;
-    padding:14px 28px; border-radius:16px; font-size:14px; font-weight:700;
-    margin-bottom:10px; cursor:pointer; width:100%; max-width:320px;
-  }
-  .start-btn.secondary { background:rgba(255,255,255,0.08); color:var(--text); }
-  
-  #fallbackInput {
-    display:none; position:fixed; inset:0; z-index:5;
-    background:var(--bg); flex-direction:column; align-items:center; justify-content:center;
-  }
-  #fallbackInput.show { display:flex; }
-  #fallbackImg, #fallbackVid {
-    max-width:100%; max-height:60vh; object-fit:contain;
-  }
-  
-  .disclaimer {
-    font-size:10px; color:var(--text2); margin-top:6px;
-    padding:8px; background:rgba(255,255,255,0.03); border-radius:8px;
-    line-height:1.5;
-  }
-  
-  #gateCollisionBar {
-    position:fixed; top:50px; left:8px; right:8px; z-index:15;
-    padding:8px 14px; border-radius:12px; font-size:13px; font-weight:600;
-    text-align:center; display:none;
-  }
-  #gateCollisionBar.show { display:block; }
-  #gateCollisionBar.safe { background:rgba(0,212,170,0.2); color:var(--accent2); border:1px solid rgba(0,212,170,0.3); }
-  #gateCollisionBar.tight { background:rgba(255,170,0,0.2); color:var(--warn); border:1px solid rgba(255,170,0,0.3); }
-  #gateCollisionBar.danger { background:rgba(255,68,68,0.2); color:var(--danger); border:1px solid rgba(255,68,68,0.3); }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--a:#ff6b00;--a2:#00d4aa;--d:#ff3333;--w:#ffaa00;--t:#e8e8e8;--t2:#777}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:system-ui,sans-serif;color:var(--t);touch-action:none;user-select:none}
+#v{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none}
+#c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none}
+#c.a{pointer-events:auto}
+#top{position:fixed;top:0;left:0;right:0;z-index:10;padding:8px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);display:none;align-items:center;justify-content:space-between;pointer-events:none}
+#top>*{pointer-events:auto}
+#top h1{font-size:13px;color:var(--a);text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.tb{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.tb:active{background:rgba(255,255,255,.2);transform:scale(.95)}
+#pill{position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:6px 16px;display:none;gap:14px;align-items:center;font-size:11px}
+#pill.s{display:flex}
+.pi{text-align:center}
+.pi .n{font-size:13px;font-weight:700;color:var(--a)}
+.pi .l{font-size:9px;color:var(--t2);text-transform:uppercase}
+.pi .n.o{color:var(--a2)}
+.pi .n.w{color:var(--w)}
+.pi .n.x{color:var(--d)}
+#toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);z-index:15;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;display:none;text-align:center;backdrop-filter:blur(10px)}
+#toast.s{display:block}
+#toast.o{background:rgba(0,212,170,.25);color:var(--a2);border:1px solid var(--a2)}
+#toast.w{background:rgba(255,170,0,.25);color:var(--w);border:1px solid var(--w)}
+#toast.x{background:rgba(255,51,51,.25);color:var(--d);border:1px solid var(--d)}
+.fab{position:fixed;z-index:10;width:52px;height:52px;border-radius:50%;border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+.fab:active{transform:scale(.9)}
+#f1{bottom:20px;right:20px;background:var(--a)}
+#f2{bottom:20px;left:20px;background:var(--a2);font-size:18px}
+#f3{bottom:84px;right:20px;background:#444;font-size:18px;width:46px;height:46px}
+#f3.on{background:var(--a)}
+#sheet{position:fixed;bottom:0;left:0;right:0;z-index:20;background:#0f0f18;border-radius:24px 24px 0 0;border:1px solid rgba(255,255,255,.08);border-bottom:none;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:75vh;display:flex;flex-direction:column}
+#sheet.o{transform:translateY(0)}
+#sh{width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:10px auto}
+#sc{overflow-y:auto;padding:0 16px 24px}
+.st{font-size:16px;font-weight:700;color:var(--a);margin-bottom:14px;text-align:center}
+.cg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.cb{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--t);border-radius:12px;padding:10px 4px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;justify-content:center;border:none}
+.cb:active{background:rgba(255,255,255,.1);transform:scale(.96)}
+.cb.p{background:var(--a);color:#fff}
+.cb.x{background:rgba(255,51,51,.15);color:var(--d);border-color:rgba(255,51,51,.3)}
+.cb.g{background:rgba(0,212,170,.15);color:var(--a2);border-color:rgba(0,212,170,.3)}
+.cb i{font-size:18px}
+.sl{background:rgba(255,255,255,.03);border-radius:12px;padding:12px;margin-bottom:10px}
+.sl label{font-size:11px;color:var(--t2);display:flex;justify-content:space-between;margin-bottom:6px}
+.sl input{width:100%;accent-color:var(--a)}
+.sl .v{color:var(--a);font-weight:700}
+.sc{font-size:12px;color:var(--t2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.md{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:16px}
+.md.s{display:flex}
+.mbx{background:#0f0f18;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;width:100%;max-width:360px}
+.mbx h2{font-size:18px;color:var(--a);margin-bottom:8px;text-align:center}
+.mbx p{font-size:13px;color:var(--t2);text-align:center;margin-bottom:14px}
+.ir{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0}
+.ir input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--t);padding:10px;border-radius:10px;width:80px;font-size:15px;text-align:center}
+.ts{display:flex;gap:4px;background:rgba(255,255,255,.04);padding:4px;border-radius:10px;margin:10px 0}
+.ta{flex:1;text-align:center;padding:8px;font-size:12px;border-radius:8px;cursor:pointer;color:var(--t2);border:none;background:transparent}
+.ta.a{background:rgba(255,107,0,.2);color:var(--a);font-weight:600}
+#db{position:fixed;top:60px;right:8px;z-index:10;background:rgba(10,10,15,.92);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;font-size:10px;max-width:200px;display:none;line-height:1.7;color:var(--t2)}
+#db.s{display:block}
+#db .o{color:var(--a2)}
+#db .x{color:var(--d)}
+#ss{position:fixed;inset:0;z-index:100;background:#050508;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#ss h1{font-size:26px;color:var(--a);margin-bottom:6px}
+#ss p{font-size:13px;color:var(--t2);margin-bottom:28px;line-height:1.6}
+.bb{background:var(--a);color:#fff;border:none;padding:16px 32px;border-radius:16px;font-size:15px;font-weight:700;margin-bottom:10px;cursor:pointer;width:100%;max-width:300px;box-shadow:0 4px 20px rgba(255,107,0,.3)}
+.bb.s{background:rgba(255,255,255,.08);color:var(--t);box-shadow:none}
+.bb:active{transform:scale(.97)}
+#fb{display:none;position:fixed;inset:0;z-index:5;background:#000;align-items:center;justify-content:center;flex-direction:column}
+#fb.s{display:flex}
+#fb img,#fb video{max-width:100%;max-height:70vh;object-fit:contain}
+#ins{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;background:rgba(0,0,0,.8);color:#fff;padding:14px 24px;border-radius:16px;font-size:15px;font-weight:600;display:none;text-align:center;border:1px solid rgba(255,255,255,.15);pointer-events:none}
+#ins.s{display:block}
+.ds{font-size:10px;color:var(--t2);margin-top:8px;line-height:1.5;padding:0 8px}
 </style>
+<base target="_blank">
 </head>
 <body>
 
-<!-- Start Screen -->
-<div id="startScreen">
-  <h1>🚗 टाटा पंच गेट सिमुलेटर</h1>
-  <h2>Tata Punch Gate & Turning Simulator<br>अपने फोन के कैमरे से देखें कि गाड़ी घुसेगी या नहीं</h2>
-  <button class="start-btn" onclick="app.startCamera()">📷 कैमरा शुरू करें</button>
-  <button class="start-btn secondary" onclick="app.usePhoto()">🖼️ फोटो/वीडियो इस्तेमाल करें</button>
-  <button class="start-btn secondary" onclick="app.showDebug()">🔧 डिबग जानकारी देखें</button>
-  <div class="disclaimer">
-    ⚠️ <b>महत्वपूर्ण:</b> यह केवल ज्यामितीय अनुमान (Approximate Simulation) है। असली गाड़ी में बहुत धीरे से जांचें। कैमरा इस्तेमाल के लिए HTTPS/localhost ज़रूरी है। फोन को ढलान पर रखने से ऑटो-स्लोप अनुमान मिलेगा।
-  </div>
+<video id="v" autoplay playsinline muted></video>
+<input type="file" id="fi" accept="image/*,video/*" style="display:none" onchange="app.hf(event)">
+
+<div id="fb"><img id="fbi" style="display:none"><video id="fbv" controls style="display:none"></video><button class="bb s" style="margin-top:20px" onclick="document.getElementById('fi').click()">दूसरी फोटो</button></div>
+
+<canvas id="c"></canvas>
+
+<div id="top"><h1>🚙 टाटा पंच सिमुलेटर</h1><div style="display:flex;gap:6px"><button class="tb" onclick="app.td()">🔧</button><button class="tb" onclick="app.sw()">🔄</button></div></div>
+
+<div id="pill">
+<div class="pi"><div class="n" id="pg">—</div><div class="l">गेट</div></div>
+<div class="pi"><div class="n" id="pb">—</div><div class="l">बॉडी</div></div>
+<div class="pi"><div class="n" id="pm">—</div><div class="l">मिरर</div></div>
+<div class="pi"><div class="n" id="pn">—</div><div class="l">मिन गैप</div></div>
 </div>
 
-<!-- Camera -->
-<video id="cameraFeed" autoplay playsinline muted></video>
-<input type="file" id="fileInput" accept="image/*,video/*" style="display:none" onchange="app.handleFile(event)">
+<div id="toast"></div>
+<div id="ins"></div>
 
-<!-- Fallback for photo/video -->
-<div id="fallbackInput">
-  <img id="fallbackImg" style="display:none">
-  <video id="fallbackVid" controls style="display:none"></video>
-  <button class="start-btn" style="margin-top:20px;" onclick="document.getElementById('fileInput').click()">दूसरी फोटो चुनें</button>
+<button id="f2" class="fab" style="display:none" onclick="app.oc()">📏</button>
+<button id="f3" class="fab" style="display:none" onclick="app.tp()">🔮</button>
+<button id="f1" class="fab" style="display:none" onclick="app.os()">⚙️</button>
+
+<div id="sheet">
+<div id="sh" onclick="app.cs()"></div>
+<div id="sc">
+<div class="st">कंट्रोल्स</div>
+<div class="sc">स्टीयरिंग</div>
+<div class="sl"><label>स्टीयरिंग कोण <span class="v" id="vs">0°</span></label><input type="range" id="is" min="-45" max="45" value="0" step="1" oninput="app.ss(this.value)"></div>
+<div class="cg">
+<button class="cb p" ontouchstart="app.sp(1)" ontouchend="app.sp(0)" onmousedown="app.sp(1)" onmouseup="app.sp(0)"><i>▶</i>आगे</button>
+<button class="cb p" ontouchstart="app.sp(-1)" ontouchend="app.sp(0)" onmousedown="app.sp(-1)" onmouseup="app.sp(0)"><i>◀</i>पीछे</button>
+<button class="cb" onclick="app.rc()"><i>↺</i>रीसेट</button>
+<button class="cb x" onclick="app.stop();location.reload()"><i>✕</i>बंद</button>
+</div>
+<div class="sc">सिमुलेशन</div>
+<div class="cg">
+<button class="cb g" onclick="app.tp()"><i>🔮</i>पाथ टॉगल</button>
+<button class="cb" onclick="app.oc()"><i>📏</i>कैलिब्रेट</button>
+<button class="cb" onclick="app.or()"><i>🚧</i>रैंप</button>
+<button class="cb" onclick="app.sw()"><i>🔄</i>कैमरा</button>
+</div>
+<div class="sc">जानकारी</div>
+<div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px;font-size:12px;line-height:1.8">
+<div style="display:flex;justify-content:space-between"><span>गेट:</span><b id="sg">2.13 m</b></div>
+<div style="display:flex;justify-content:space-between"><span>बॉडी:</span><b>1.742 m</b></div>
+<div style="display:flex;justify-content:space-between"><span>मिरर:</span><b>1.945 m</b></div>
+<div style="display:flex;justify-content:space-between"><span>व्हीलबेस:</span><b>2.445 m</b></div>
+<div style="display:flex;justify-content:space-between"><span>GC:</span><b>193 mm</b></div>
+</div>
+<div class="ds">⚠️ यह अनुमानित सिमुलेशन है — असली गाड़ी में धीरे जांचें।</div>
+</div>
 </div>
 
-<!-- Canvas Overlay -->
-<canvas id="overlay"></canvas>
-
-<!-- Top Bar -->
-<div id="topBar" class="panel" style="display:none">
-  <h1>🚙 टाटा पंच सिमुलेटर</h1>
-  <span class="badge" id="modeBadge">कैमरा बंद</span>
+<div id="cm" class="md">
+<div class="mbx">
+<h2>🚪 गेट कैलिब्रेशन</h2>
+<p id="ch">बाएं पिलर पर टैप करें</p>
+<div class="ir"><input id="gf" value="7" step="0.5" onchange="app.ug()"><span style="color:var(--t2);font-size:13px">फीट=</span><input id="gm" value="2.134" step="0.01" onchange="app.ugm()"><span style="color:var(--t2);font-size:13px">मीटर</span></div>
+<div class="ts"><button class="ta a" onclick="app.scm(2)">2 बिंदु</button><button class="ta" onclick="app.scm(4)">4 बिंदु</button></div>
+<div class="cg" style="grid-template-columns:repeat(3,1fr)"><button class="cb g" onclick="app.fc()">✓ तैयार</button><button class="cb" onclick="app.rcb()">↺ रीसेट</button><button class="cb x" onclick="app.cc()">✕ बंद</button></div>
+<div class="ds">2-बिंदु = सरल। 4-बिंदु = पर्सपेक्टिव सही।</div>
+</div>
 </div>
 
-<!-- Gate Collision Bar -->
-<div id="gateCollisionBar"></div>
-
-<!-- Debug Panel -->
-<div id="debugPanel" class="panel">
-  <div><b>🔧 डिबग स्क्रीन</b></div>
-  <div>कैमरा अनुमति: <span id="d-perm">जांच रहे...</span></div>
-  <div>सुरक्षित संदर्भ (HTTPS): <span id="d-secure">जांच रहे...</span></div>
-  <div>कैमरा स्ट्रीम: <span id="d-stream">बंद</span></div>
-  <div>चुना हुआ कैमरा: <span id="d-facing">—</span></div>
-  <div>वीडियो साइज़: <span id="d-size">—</span></div>
-  <div>ब्राउज़र: <span id="d-browser">—</span></div>
-  <div>ऑटोमैटिक डेप्थ: <span class="err">उपलब्ध नहीं</span> <small>(LiDAR/ToF बिना)</small></div>
-  <div>ऑटोमैटिक स्लोप (फोन झुकाव): <span id="d-slope">जांच रहे...</span></div>
-  <div>पिक्सल/मीटर: <span id="d-ppm">—</span></div>
-  <div>कैलिब्रेशन: <span id="d-calib">नहीं हुआ</span></div>
+<div id="rm" class="md">
+<div class="mbx">
+<h2>🚧 रैंप मोड</h2>
+<div class="sl"><label>ऊंचाई <span class="v" id="rhv">10 cm</span></label><input id="rh" type="range" min="0" max="50" value="10" oninput="app.ur()"></div>
+<div class="sl"><label>लंबाई <span class="v" id="rlv">2.0 m</span></label><input id="rl" type="range" min="50" max="500" value="200" oninput="app.ur()"></div>
+<div class="sl"><label>ड्राइववे <span class="v" id="rdv">3.0 m</span></label><input id="rd" type="range" min="100" max="600" value="300" oninput="app.ur()"></div>
+<div style="font-size:12px;color:var(--w);margin:8px 0" id="rw"></div>
+<button class="cb" style="width:100%" onclick="app.cr()">बंद करें</button>
+</div>
 </div>
 
-<!-- Calibration Panel -->
-<div id="calibrationPanel" class="panel">
-  <h2>🚪 गेट कैलिब्रेशन</h2>
-  <p id="calibText">गेट के नीचे के दो कोनों (बाएं और दाएं) पर टैप करें</p>
-  <div class="gate-input">
-    <input type="number" id="gateWidthFt" value="7" step="0.5" onchange="app.updateGateWidth()">
-    <span class="unit">फीट</span>
-    <span style="color:var(--text2);">=</span>
-    <input type="number" id="gateWidthM" value="2.134" step="0.01" onchange="app.updateGateWidthM()">
-    <span class="unit">मीटर</span>
-  </div>
-  <div class="mode-tabs">
-    <div class="mode-tab active" onclick="app.setCalibMode(2)">2 बिंदु (सरल)</div>
-    <div class="mode-tab" onclick="app.setCalibMode(4)">4 बिंदु (पर्सपेक्टिव)</div>
-  </div>
-  <div style="display:flex; gap:8px; justify-content:center; margin-top:10px;">
-    <button class="btn success" onclick="app.finishCalibration()">✓ तैयार</button>
-    <button class="btn" onclick="app.resetCalibration()">↺ रीसेट</button>
-    <button class="btn danger" onclick="app.cancelCalibration()">✕ रद्द</button>
-  </div>
-  <div class="disclaimer">
-    💡 <b>टिप:</b> 2-बिंदु = सीधी दूरी। 4-बिंदु = होमोग्राफी/पर्सपेक्टिव सही करेगा (गेट के चारों कोने टैप करें)।
-  </div>
+<div id="db">
+<div style="font-weight:700;margin-bottom:4px">🔧 डिबग</div>
+<div>कैमरा: <span id="dp">—</span></div>
+<div>HTTPS: <span id="ds">—</span></div>
+<div>स्ट्रीम: <span id="dt">—</span></div>
+<div>फेसिंग: <span id="df">—</span></div>
+<div>वीडियो: <span id="dz">—</span></div>
+<div>पीपीएम: <span id="dp2">—</span></div>
+<div>कैलिब: <span id="dc">—</span></div>
+<div>स्लोप: <span id="dl">—</span></div>
 </div>
 
-<!-- Instruction Toast -->
-<div id="instructionToast" class="panel"></div>
-
-<!-- Warning Banner -->
-<div id="warningBanner"></div>
-
-<!-- Ramp Panel -->
-<div id="rampPanel" class="panel">
-  <h3>🚧 रैंप/ढलान मोड</h3>
-  <div class="ramp-row">
-    <label>रैंप ऊंचाई</label>
-    <input type="range" id="rampHeight" min="0" max="50" step="1" value="10" oninput="app.updateRamp()">
-    <span class="val" id="rampHeightVal">10 cm</span>
-  </div>
-  <div class="ramp-row">
-    <label>रैंप लंबाई</label>
-    <input type="range" id="rampLength" min="50" max="500" step="10" value="200" oninput="app.updateRamp()">
-    <span class="val" id="rampLengthVal">2.0 m</span>
-  </div>
-  <div class="ramp-row">
-    <label>ड्राइववे चौड़ाई</label>
-    <input type="range" id="drivewayW" min="100" max="600" step="10" value="300" oninput="app.updateRamp()">
-    <span class="val" id="drivewayWVal">3.0 m</span>
-  </div>
-  <div class="ramp-row">
-    <label>रैंप कोण (ऑटो)</label>
-    <span class="val" id="rampAngleVal">2.9°</span>
-  </div>
-  <div class="disclaimer" id="rampWarning" style="margin-top:8px;"></div>
-</div>
-
-<!-- Bottom Controls -->
-<div id="controls" class="panel">
-  <div id="infoStrip" class="panel" style="position:static; margin-bottom:6px;">
-    <div class="info-item"><div class="num" id="infoGate">—</div><div class="lbl">गेट</div></div>
-    <div class="info-item"><div class="num" id="infoBody">—</div><div class="lbl">बॉडी</div></div>
-    <div class="info-item"><div class="num" id="infoMirror">—</div><div class="lbl">मिरर</div></div>
-    <div class="info-item"><div class="num" id="infoLeft">—</div><div class="lbl">बाएं गैप</div></div>
-    <div class="info-item"><div class="num" id="infoRight">—</div><div class="lbl">दाएं गैप</div></div>
-    <div class="info-item"><div class="num" id="infoMin">—</div><div class="lbl">मिन गैप</div></div>
-  </div>
-  
-  <div class="control-row">
-    <button class="btn" onclick="app.toggleCalibration()">📏 कैलिब्रेट</button>
-    <button class="btn" onclick="app.toggleRamp()">🚧 रैंप</button>
-    <button class="btn" onclick="app.resetCar()">↺ गाड़ी रीसेट</button>
-    <button class="btn" onclick="app.switchCamera()">🔄 कैमरा</button>
-  </div>
-  
-  <div class="control-row">
-    <div class="slider-group">
-      <label>स्टीयरिंग</label>
-      <input type="range" id="steering" min="-45" max="45" value="0" step="1" oninput="app.updateSteering(this.value)">
-      <span class="val" id="steerVal">0°</span>
-    </div>
-  </div>
-  
-  <div class="control-row">
-    <button class="btn primary" ontouchstart="app.setSpeed(1)" ontouchend="app.setSpeed(0)" onmousedown="app.setSpeed(1)" onmouseup="app.setSpeed(0)">▶ आगे</button>
-    <button class="btn primary" ontouchstart="app.setSpeed(-1)" ontouchend="app.setSpeed(0)" onmousedown="app.setSpeed(-1)" onmouseup="app.setSpeed(0)">◀ पीछे</button>
-    <button class="btn" id="btnPath" onclick="app.toggleSimulation()">🔮 पाथ बंद</button>
-    <button class="btn" onclick="app.toggleDebug()">🔧 डिबग</button>
-  </div>
-  
-  <div class="disclaimer">
-    🎮 <b>कैसे इस्तेमाल करें:</b> एक उंगली से गाड़ी खींचें, दो उंगलियों से घुमाएं। स्टीयरिंग सेट करके आगे/पीछे दबाएं।
-  </div>
+<div id="ss">
+<h1>🚗 टाटा पंच गेट सिमुलेटर</h1>
+<p>अपने फोन के कैमरे से देखें<br>कि गाड़ी घुसेगी या नहीं</p>
+<button class="bb" onclick="app.sc()">📷 कैमरा शुरू करें</button>
+<button class="bb s" onclick="app.up()">🖼️ फोटो/वीडियो</button>
+<div class="ds">⚠️ HTTPS/localhost ज़रूरी। यह अनुमानित सिमुलेशन है।</div>
 </div>
 
 <script>
-// ==================== CAR SPECS ====================
-const CAR = {
-  length: 3.876,
-  width: 1.742,
-  mirrorWidth: 1.945,
-  wheelbase: 2.445,
-  frontOverhang: 0.823,
-  rearOverhang: 0.608,
-  groundClearance: 0.193,
-  trackWidth: 1.500,
-  minTurnRadius: 5.0,
-  approachAngle: 20.0,
-  departureAngle: 35.0
-};
+const CAR={length:3.876,width:1.742,mirrorWidth:1.945,wheelbase:2.445,frontOverhang:0.823,rearOverhang:0.608,groundClearance:0.193,trackWidth:1.5,approachAngle:20,departureAngle:35};
+const CLR={s:'#00d4aa',t:'#ffaa00',x:'#ff3333',b:'rgba(255,107,0,.28)',st:'#ff6b00',g:'rgba(100,180,255,.15)',m:'rgba(255,200,0,.35)',w:'#2a2a2a',ps:'rgba(0,212,170,.45)',pt:'rgba(255,170,0,.5)',pd:'rgba(255,51,51,.5)',gt:'#00d4aa',gp:'#ff3333'};
 
-const COLORS = {
-  safe: '#00d4aa', tight: '#ffaa00', danger: '#ff4444',
-  carBody: 'rgba(255,107,0,0.22)',
-  carStroke: '#ff6b00',
-  carGlass: 'rgba(100,180,255,0.12)',
-  mirror: 'rgba(255,200,0,0.25)',
-  wheel: '#333',
-  pathSafe: 'rgba(0,212,170,0.2)',
-  pathTight: 'rgba(255,170,0,0.3)',
-  pathDanger: 'rgba(255,68,68,0.3)',
-  gate: '#00d4aa',
-  gatePost: '#ff4444',
-  text: '#fff'
-};
+function sH(p){const s=p,d=[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}],A=[];for(let i=0;i<4;i++){const sx=s[i].x,sy=s[i].y,dx=d[i].x,dy=d[i].y;A.push([sx,sy,1,0,0,0,-dx*sx,-dx*sy,-dx]);A.push([0,0,0,sx,sy,1,-dy*sx,-dy*sy,-dy]);}for(let c=0;c<8;c++){let pv=c;for(let r=c;r<8;r++)if(Math.abs(A[r][c])>Math.abs(A[pv][c]))pv=r;if(Math.abs(A[pv][c])<1e-12)continue;[A[c],A[pv]]=[A[pv],A[c]];const p=A[c][c];for(let j=c;j<9;j++)A[c][j]/=p;for(let r=0;r<8;r++){if(r===c)continue;const f=A[r][c];for(let j=c;j<9;j++)A[r][j]-=f*A[c][j];}}const h=[];for(let i=0;i<8;i++)h.push(-A[i][8]);h.push(1);const n=Math.sqrt(h[0]*h[0]+h[3]*h[3]+h[6]*h[6]);for(let i=0;i<9;i++)h[i]/=n;return h;}
+function aH(H,p){const x=H[0]*p.x+H[1]*p.y+H[2],y=H[3]*p.x+H[4]*p.y+H[5],w=H[6]*p.x+H[7]*p.y+H[8];return w===0?{x:0,y:0}:{x:x/w,y:y/w};}
+function iH(H){const a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7],i=H[8];const A=e*i-f*h,B=f*g-d*i,C=d*h-e*g,D=c*h-b*i,E=a*i-c*g,F=b*g-a*h,G=b*f-c*e,H2=c*d-a*f,I=a*e-b*d;const det=a*A+b*B+c*C;if(Math.abs(det)<1e-10)return null;return[A/det,D/det,G/det,B/det,E/det,H2/det,C/det,F/det,I/det];}
 
-// ==================== HOMOGRAPHY ====================
-function solveHomography(pts) {
-  const src = pts;
-  const dst = [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}];
-  const A = [];
-  for (let i = 0; i < 4; i++) {
-    const sx = src[i].x, sy = src[i].y;
-    const dx = dst[i].x, dy = dst[i].y;
-    A.push([sx, sy, 1, 0, 0, 0, -dx*sx, -dx*sy, -dx]);
-    A.push([0, 0, 0, sx, sy, 1, -dy*sx, -dy*sy, -dy]);
-  }
-  for (let col = 0; col < 8; col++) {
-    let pivot = col;
-    for (let row = col; row < 8; row++) {
-      if (Math.abs(A[row][col]) > Math.abs(A[pivot][col])) pivot = row;
-    }
-    if (Math.abs(A[pivot][col]) < 1e-12) continue;
-    [A[col], A[pivot]] = [A[pivot], A[col]];
-    const piv = A[col][col];
-    for (let j = col; j < 9; j++) A[col][j] /= piv;
-    for (let row = 0; row < 8; row++) {
-      if (row === col) continue;
-      const f = A[row][col];
-      for (let j = col; j < 9; j++) A[row][j] -= f * A[col][j];
-    }
-  }
-  const h = [];
-  for (let i = 0; i < 8; i++) h.push(-A[i][8]);
-  h.push(1);
-  const norm = Math.sqrt(h[0]*h[0]+h[3]*h[3]+h[6]*h[6]);
-  for (let i = 0; i < 9; i++) h[i] /= norm;
-  return h;
-}
+class Veh{constructor(){this.r()}r(){this.x=0;this.y=0;this.h=-Math.PI/2;this.s=0;this.sp=0;this.pa=[]}cn(){const c=Math.cos(this.h),s=Math.sin(this.h),Lf=CAR.frontOverhang+CAR.wheelbase,Lr=CAR.rearOverhang,W2=CAR.width/2,M2=CAR.mirrorWidth/2;const t=pts=>pts.map(p=>({x:this.x+p.x*c-p.y*s,y:this.y+p.x*s+p.y*c}));return{body:t([{x:Lf,y:-W2},{x:Lf,y:W2},{x:-Lr,y:W2},{x:-Lr,y:-W2}]),mirrors:t([{x:0.9,y:-M2},{x:0.9,y:M2}]),wheels:t([{x:CAR.wheelbase,y:-CAR.trackWidth/2},{x:CAR.wheelbase,y:CAR.trackWidth/2},{x:0,y:-CAR.trackWidth/2},{x:0,y:CAR.trackWidth/2}])}}up(dt){if(Math.abs(this.sp)<0.01)return;const sr=this.s*Math.PI/180,L=CAR.wheelbase,v=this.sp*2.5;if(Math.abs(sr)<0.001){this.x+=v*dt*Math.cos(this.h);this.y+=v*dt*Math.sin(this.h);}else{const R=L/Math.tan(sr);const ix=this.x-R*Math.sin(this.h),iy=this.y+R*Math.cos(this.h);this.h+=(v/R)*dt;this.x=ix+R*Math.sin(this.h);this.y=iy-R*Math.cos(this.h);}while(this.h>Math.PI)this.h-=2*Math.PI;while(this.h<-Math.PI)this.h+=2*Math.PI;this.pa.push({x:this.x,y:this.y,h:this.h});if(this.pa.length>300)this.pa.shift();}pr(st,steps,dt){dt=dt||0.05;const arr=[];let px=this.x,py=this.y,ph=this.h;const sr=st*Math.PI/180,L=CAR.wheelbase;const v=Math.sign(this.sp||1)*2.5;for(let i=0;i<steps;i++){if(Math.abs(sr)<0.001){px+=v*dt*Math.cos(ph);py+=v*dt*Math.sin(ph);}else{const R=L/Math.tan(sr);const ix=px-R*Math.sin(ph),iy=py+R*Math.cos(ph);ph+=(v/R)*dt;px=ix+R*Math.sin(ph);py=iy-R*Math.cos(ph);}arr.push({x:px,y:py,h:ph});}return arr;}ev(pr){const Lf=CAR.frontOverhang+CAR.wheelbase,Lr=CAR.rearOverhang,W2=CAR.width/2,M2=CAR.mirrorWidth/2;return pr.map(st=>{const c=Math.cos(st.h),s=Math.sin(st.h);return[{x:st.x+Lf*c-W2*s,y:st.y+Lf*s+W2*c},{x:st.x+Lf*c+W2*s,y:st.y+Lf*s-W2*c},{x:st.x-Lr*c+W2*s,y:st.y-Lr*s-W2*c},{x:st.x-Lr*c-W2*s,y:st.y-Lr*s+W2*c},{x:st.x+0.9*c-M2*s,y:st.y+0.9*s+M2*c},{x:st.x+0.9*c+M2*s,y:st.y+0.9*s-M2*c}];});}}
 
-function applyH(H, pt) {
-  const x = H[0]*pt.x + H[1]*pt.y + H[2];
-  const y = H[3]*pt.x + H[4]*pt.y + H[5];
-  const w = H[6]*pt.x + H[7]*pt.y + H[8];
-  return w === 0 ? {x:0,y:0} : {x:x/w, y:y/w};
-}
-
-function invertH(H) {
-  const a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7],i=H[8];
-  const A=e*i-f*h, B=f*g-d*i, C=d*h-e*g;
-  const D=c*h-b*i, E=a*i-c*g, F=b*g-a*h;
-  const G=b*f-c*e, H_=c*d-a*f, I=a*e-b*d;
-  const det = a*A + b*B + c*C;
-  if (Math.abs(det) < 1e-10) return null;
-  return [A/det, D/det, G/det, B/det, E/det, H_/det, C/det, F/det, I/det];
-}
-
-// ==================== VEHICLE MODEL ====================
-class VehicleModel {
-  constructor() { this.reset(); }
-  
-  reset() {
-    this.x = 0; this.y = 0;
-    this.heading = -Math.PI/2;
-    this.steering = 0;
-    this.speed = 0;
-    this.path = [];
-  }
-  
-  getLocalCorners() {
-    const Lf = CAR.frontOverhang + CAR.wheelbase;
-    const Lr = CAR.rearOverhang;
-    const W2 = CAR.width/2;
-    const M2 = CAR.mirrorWidth/2;
-    return {
-      body: [{x:Lf,y:-W2},{x:Lf,y:W2},{x:-Lr,y:W2},{x:-Lr,y:-W2}],
-      mirrors: [{x:0.9,y:-M2},{x:0.9,y:M2}],
-      wheels: [
-        {x:CAR.wheelbase,y:-CAR.trackWidth/2,r:0.3},
-        {x:CAR.wheelbase,y:CAR.trackWidth/2,r:0.3},
-        {x:0,y:-CAR.trackWidth/2,r:0.3},
-        {x:0,y:CAR.trackWidth/2,r:0.3}
-      ]
-    };
-  }
-  
-  worldPoints() {
-    const c = Math.cos(this.heading), s = Math.sin(this.heading);
-    const local = this.getLocalCorners();
-    const t = pts => pts.map(p => ({x:this.x+p.x*c-p.y*s, y:this.y+p.x*s+p.y*c, ...p}));
-    return {body:t(local.body), mirrors:t(local.mirrors), wheels:t(local.wheels)};
-  }
-  
-  update(dt) {
-    if (Math.abs(this.speed) < 0.01) return;
-    const steerRad = this.steering * Math.PI/180;
-    const L = CAR.wheelbase;
-    const v = this.speed * 2.0;
-    if (Math.abs(steerRad) < 0.001) {
-      this.x += v*dt*Math.cos(this.heading);
-      this.y += v*dt*Math.sin(this.heading);
-    } else {
-      const R = L / Math.tan(steerRad);
-      const icrX = this.x - R*Math.sin(this.heading);
-      const icrY = this.y + R*Math.cos(this.heading);
-      this.heading += (v/R)*dt;
-      this.x = icrX + R*Math.sin(this.heading);
-      this.y = icrY - R*Math.cos(this.heading);
-    }
-    while (this.heading > Math.PI) this.heading -= 2*Math.PI;
-    while (this.heading < -Math.PI) this.heading += 2*Math.PI;
-    this.path.push({x:this.x,y:this.y,h:this.heading,s:this.steering});
-    if (this.path.length > 400) this.path.shift();
-  }
-  
-  predict(steps, dt) {
-    dt = dt || 0.05;
-    const arr = [];
-    let px=this.x, py=this.y, ph=this.heading;
-    const steerRad = this.steering * Math.PI/180;
-    const L = CAR.wheelbase;
-    const v = Math.sign(this.speed || 1) * 2.0;
-    for (let i = 0; i < steps; i++) {
-      if (Math.abs(steerRad) < 0.001) {
-        px += v*dt*Math.cos(ph); py += v*dt*Math.sin(ph);
-      } else {
-        const R = L / Math.tan(steerRad);
-        const icrX = px - R*Math.sin(ph);
-        const icrY = py + R*Math.cos(ph);
-        ph += (v/R)*dt;
-        px = icrX + R*Math.sin(ph);
-        py = icrY - R*Math.cos(ph);
-      }
-      arr.push({x:px,y:py,h:ph});
-    }
-    return arr;
-  }
-  
-  sweptEnvelope(pred) {
-    const Lf = CAR.frontOverhang + CAR.wheelbase;
-    const Lr = CAR.rearOverhang;
-    const W2 = CAR.width/2;
-    const M2 = CAR.mirrorWidth/2;
-    const env = [];
-    for (const st of pred) {
-      const c=Math.cos(st.h), s=Math.sin(st.h);
-      env.push([
-        {x:st.x+Lf*c-W2*s, y:st.y+Lf*s+W2*c},
-        {x:st.x+Lf*c+W2*s, y:st.y+Lf*s-W2*c},
-        {x:st.x-Lr*c+W2*s, y:st.y-Lr*s-W2*c},
-        {x:st.x-Lr*c-W2*s, y:st.y-Lr*s+W2*c},
-        {x:st.x+0.9*c-M2*s, y:st.y+0.9*s+M2*c},
-        {x:st.x+0.9*c+M2*s, y:st.y+0.9*s-M2*c}
-      ]);
-    }
-    return env;
-  }
-}
-
-// ==================== APP ====================
-class App {
-  constructor() {
-    this.video = document.getElementById('cameraFeed');
-    this.canvas = document.getElementById('overlay');
-    this.ctx = this.canvas.getContext('2d');
-    this.vehicle = new VehicleModel();
-    
-    this.stream = null;
-    this.currentFacing = 'environment';
-    this.calibrationPoints = [];
-    this.calibrationMode = 2;
-    this.gateWidthM = 2.134;
-    this.pixelsPerMeter = 120;
-    this.homography = null;
-    this.invHomography = null;
-    this.isCalibrated = false;
-    this.isCalibrating = false;
-    this.showPath = false;
-    this.rampMode = false;
-    this.rampData = {height:0.10,length:2.0,driveway:3.0,angle:2.9};
-    
-    this.carScreen = {x:0,y:0,scale:1,rotation:-90};
-    this.isDragging = false;
-    this.isRotating = false;
-    this.dragStart = {x:0,y:0,carX:0,carY:0};
-    this.lastTouchDist = 0;
-    this.lastTouchAngle = 0;
-    this.startRotation = 0;
-    this.touchId = null;
-    
-    this.simSpeed = 0;
-    this.lastTime = 0;
-    this.deviceSlope = null;
-    this.frameCount = 0;
-    
-    this.init();
-  }
-  
-  init() {
-    this.resize();
-    window.addEventListener('resize',()=>this.resize());
-    window.addEventListener('orientationchange',()=>setTimeout(()=>this.resize(),300));
-    
-    this.canvas.addEventListener('touchstart',e=>this.onTouchStart(e),{passive:false});
-    this.canvas.addEventListener('touchmove',e=>this.onTouchMove(e),{passive:false});
-    this.canvas.addEventListener('touchend',e=>this.onTouchEnd(e));
-    this.canvas.addEventListener('mousedown',e=>this.onMouseDown(e));
-    window.addEventListener('mousemove',e=>this.onMouseMove(e));
-    window.addEventListener('mouseup',e=>this.onMouseUp(e));
-    
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation',e=>{
-        if (e.beta!==null) {
-          this.deviceSlope=e.beta;
-          const el=document.getElementById('d-slope');
-          if(el) el.innerHTML=`<span class="ok">${e.beta.toFixed(1)}°</span> (phone tilt)`;
-        }
-      });
-    }
-    
-    const isSecure=window.isSecureContext;
-    document.getElementById('d-secure').innerHTML=isSecure?'<span class="ok">हाँ ✓</span>':'<span class="err">नहीं ✗</span>';
-    document.getElementById('d-browser').textContent=navigator.userAgent.split(')')[0]+')';
-    
-    this.carScreen.x=window.innerWidth/2;
-    this.carScreen.y=window.innerHeight*0.6;
-    
-    requestAnimationFrame(t=>this.loop(t));
-  }
-  
-  resize() {
-    const dpr=window.devicePixelRatio||1;
-    this.canvas.width=window.innerWidth*dpr;
-    this.canvas.height=window.innerHeight*dpr;
-    this.canvas.style.width=window.innerWidth+'px';
-    this.canvas.style.height=window.innerHeight+'px';
-    this.ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  
-  // ==================== CAMERA ====================
-  async startCamera() {
-    try {
-      const constraints={
-        video:{facingMode:{ideal:this.currentFacing},width:{ideal:1920},height:{ideal:1080}},
-        audio:false
-      };
-      this.stream=await navigator.mediaDevices.getUserMedia(constraints);
-      this.video.srcObject=this.stream;
-      await this.video.play();
-      
-      document.getElementById('startScreen').style.display='none';
-      this.video.style.display='block';
-      document.getElementById('topBar').style.display='flex';
-      document.getElementById('controls').style.display='flex';
-      document.getElementById('infoStrip').classList.add('show');
-      this.canvas.classList.add('active');
-      document.getElementById('modeBadge').textContent='कैमरा चालू';
-      document.getElementById('d-perm').innerHTML='<span class="ok">मिल गई ✓</span>';
-      document.getElementById('d-stream').innerHTML='<span class="ok">चालू</span>';
-      document.getElementById('d-facing').textContent=this.currentFacing==='environment'?'पिछला (Rear)':'आगे (Front)';
-      
-      setTimeout(()=>this.updateVideoSize(),500);
-      setTimeout(()=>this.toggleCalibration(),800);
-    } catch(err) {
-      document.getElementById('d-perm').innerHTML=`<span class="err">नहीं मिली ✗: ${err.name}</span>`;
-      alert('कैमरा एक्सेस नहीं मिला: '+err.message+'\n\n"फोटो/वीडियो इस्तेमाल करें" चुनें।');
-    }
-  }
-  
-  updateVideoSize() {
-    if(this.video.videoWidth) {
-      document.getElementById('d-size').textContent=`${this.video.videoWidth}x${this.video.videoHeight}`;
-    }
-  }
-  
-  async switchCamera() {
-    if(!this.stream) return;
-    this.currentFacing=this.currentFacing==='environment'?'user':'environment';
-    this.stream.getTracks().forEach(t=>t.stop());
-    await this.startCamera();
-  }
-  
-  stopCamera() {
-    if(this.stream) {
-      this.stream.getTracks().forEach(t=>t.stop());
-      this.stream=null;
-    }
-    this.video.srcObject=null;
-    document.getElementById('d-stream').innerHTML='<span class="err">बंद</span>';
-  }
-  
-  // ==================== PHOTO/VIDEO ====================
-  usePhoto() {
-    document.getElementById('startScreen').style.display='none';
-    document.getElementById('fallbackInput').classList.add('show');
-    document.getElementById('topBar').style.display='flex';
-    document.getElementById('controls').style.display='flex';
-    document.getElementById('infoStrip').classList.add('show');
-    this.canvas.classList.add('active');
-    document.getElementById('modeBadge').textContent='फोटो मोड';
-    document.getElementById('fileInput').click();
-  }
-  
-  handleFile(e) {
-    const file=e.target.files[0];
-    if(!file) return;
-    const url=URL.createObjectURL(file);
-    const img=document.getElementById('fallbackImg');
-    const vid=document.getElementById('fallbackVid');
-    if(file.type.startsWith('video')) {
-      img.style.display='none'; vid.style.display='block'; vid.src=url; vid.play();
-      document.getElementById('modeBadge').textContent='वीडियो मोड';
-    } else {
-      vid.style.display='none'; img.style.display='block'; img.src=url;
-      document.getElementById('modeBadge').textContent='फोटो मोड';
-    }
-    setTimeout(()=>this.toggleCalibration(),500);
-  }
-  
-  // ==================== CALIBRATION ====================
-  toggleCalibration() {
-    this.isCalibrating=!this.isCalibrating;
-    const panel=document.getElementById('calibrationPanel');
-    panel.classList.toggle('show',this.isCalibrating);
-    if(this.isCalibrating) {
-      this.calibrationPoints=[];
-      this.homography=null; this.invHomography=null;
-      this.updateCalibText();
-    }
-  }
-  
-  setCalibMode(mode) {
-    this.calibrationMode=mode;
-    document.querySelectorAll('.mode-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&mode===2)||(i===1&&mode===4)));
-    this.calibrationPoints=[];
-    this.updateCalibText();
-  }
-  
-  updateCalibText() {
-    const el=document.getElementById('calibText');
-    if(this.calibrationMode===2) {
-      if(this.calibrationPoints.length===0) el.innerHTML='👆 <b>बाएं</b> पिलर/कोने पर टैप करें';
-      else if(this.calibrationPoints.length===1) el.innerHTML='👆 अब <b>दाएं</b> पिलर/कोने पर टैप करें';
-      else el.innerHTML='✓ दोनों बिंदु मिल गए! "तैयार" दबाएं';
-    } else {
-      const labels=['बाएं-नीचे','दाएं-नीचे','दाएं-ऊपर','बाएं-ऊपर'];
-      if(this.calibrationPoints.length<4) el.innerHTML=`👆 गेट का <b>${labels[this.calibrationPoints.length]}</b> कोना टैप करें`;
-      else el.innerHTML='✓ चारों बिंदु मिल गए! "तैयार" दबाएं';
-    }
-  }
-  
-  updateGateWidth() {
-    const ft=parseFloat(document.getElementById('gateWidthFt').value)||7;
-    this.gateWidthM=ft*0.3048;
-    document.getElementById('gateWidthM').value=this.gateWidthM.toFixed(3);
-  }
-  
-  updateGateWidthM() {
-    const m=parseFloat(document.getElementById('gateWidthM').value)||2.134;
-    this.gateWidthM=m;
-    document.getElementById('gateWidthFt').value=(m/0.3048).toFixed(2);
-  }
-  
-  addCalibPoint(sx,sy) {
-    this.calibrationPoints.push({x:sx,y:sy});
-    this.updateCalibText();
-    if(this.calibrationMode===2&&this.calibrationPoints.length===2) {
-      const p1=this.calibrationPoints[0],p2=this.calibrationPoints[1];
-      const dist=Math.hypot(p2.x-p1.x,p2.y-p1.y);
-      this.pixelsPerMeter=dist/this.gateWidthM;
-      document.getElementById('d-ppm').textContent=this.pixelsPerMeter.toFixed(1);
-    }
-  }
-  
-  finishCalibration() {
-    if(this.calibrationMode===2) {
-      if(this.calibrationPoints.length<2) { alert('कृपया दोनों पिलरों पर टैप करें!'); return; }
-      const p1=this.calibrationPoints[0],p2=this.calibrationPoints[1];
-      const dist=Math.hypot(p2.x-p1.x,p2.y-p1.y);
-      this.pixelsPerMeter=dist/this.gateWidthM;
-      this.gateLine={p1,p2};
-    } else {
-      if(this.calibrationPoints.length<4) { alert('कृपया चारों कोने टैप करें!'); return; }
-      this.homography=solveHomography(this.calibrationPoints);
-      this.invHomography=invertH(this.homography);
-      const p1=this.calibrationPoints[0],p2=this.calibrationPoints[1];
-      const dist=Math.hypot(p2.x-p1.x,p2.y-p1.y);
-      this.pixelsPerMeter=dist/this.gateWidthM;
-    }
-    this.isCalibrated=true;
-    this.isCalibrating=false;
-    document.getElementById('calibrationPanel').classList.remove('show');
-    document.getElementById('d-calib').innerHTML='<span class="ok">हो गया ✓</span>';
-    document.getElementById('d-ppm').textContent=this.pixelsPerMeter.toFixed(1);
-    this.showToast('✓ कैलिब्रेशन पूरा! अब गाड़ी को ड्रैग करें');
-  }
-  
-  resetCalibration() {
-    this.calibrationPoints=[];
-    this.homography=null; this.invHomography=null;
-    this.isCalibrated=false;
-    this.updateCalibText();
-    document.getElementById('d-calib').innerHTML='<span class="err">नहीं हुआ</span>';
-  }
-  
-  cancelCalibration() {
-    this.isCalibrating=false;
-    document.getElementById('calibrationPanel').classList.remove('show');
-  }
-  
-  worldToScreen(wx,wy) {
-    if(this.homography&&this.invHomography) {
-      const norm={x:wx/this.gateWidthM,y:wy/(this.gateWidthM*2)};
-      return applyH(this.homography,norm);
-    }
-    return {
-      x:this.carScreen.x+wx*this.pixelsPerMeter,
-      y:this.carScreen.y+wy*this.pixelsPerMeter
-    };
-  }
-  
-  // ==================== TOUCH/MOUSE ====================
-  getPointerPos(e) {
-    const rect=this.canvas.getBoundingClientRect();
-    const cx=e.touches?e.touches[0].clientX:e.clientX;
-    const cy=e.touches?e.touches[0].clientY:e.clientY;
-    return{x:cx-rect.left,y:cy-rect.top};
-  }
-  
-  isOverCar(x,y) {
-    const dx=x-this.carScreen.x, dy=y-this.carScreen.y;
-    const lenPx=CAR.length*this.pixelsPerMeter*this.carScreen.scale;
-    const widPx=CAR.width*this.pixelsPerMeter*this.carScreen.scale;
-    const rad=this.carScreen.rotation*Math.PI/180;
-    const lx=dx*Math.cos(-rad)-dy*Math.sin(-rad);
-    const ly=dx*Math.sin(-rad)+dy*Math.cos(-rad);
-    return Math.abs(lx)<lenPx/2+25&&Math.abs(ly)<widPx/2+25;
-  }
-  
-  onTouchStart(e) {
-    if(this.isCalibrating) {
-      e.preventDefault();
-      const p=this.getPointerPos(e);
-      this.addCalibPoint(p.x,p.y);
-      return;
-    }
-    if(e.touches.length===1) {
-      const p=this.getPointerPos(e);
-      if(this.isOverCar(p.x,p.y)) {
-        this.isDragging=true;
-        this.dragStart={x:p.x,y:p.y,carX:this.carScreen.x,carY:this.carScreen.y};
-        this.touchId=e.touches[0].identifier;
-      }
-    } else if(e.touches.length===2) {
-      this.isRotating=true; this.isDragging=false;
-      const t1=e.touches[0],t2=e.touches[1];
-      this.lastTouchDist=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
-      this.lastTouchAngle=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);
-      this.startRotation=this.carScreen.rotation;
-    }
-  }
-  
-  onTouchMove(e) {
-    e.preventDefault();
-    if(this.isDragging&&e.touches.length===1) {
-      const p=this.getPointerPos(e);
-      this.carScreen.x=this.dragStart.carX+(p.x-this.dragStart.x);
-      this.carScreen.y=this.dragStart.carY+(p.y-this.dragStart.y);
-    } else if(this.isRotating&&e.touches.length===2) {
-      const t1=e.touches[0],t2=e.touches[1];
-      const angle=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);
-      const da=(angle-this.lastTouchAngle)*180/Math.PI;
-      this.carScreen.rotation=this.startRotation+da;
-    }
-  }
-  
-  onTouchEnd(e) {
-    this.isDragging=false; this.isRotating=false; this.touchId=null;
-  }
-  
-  onMouseDown(e) {
-    if(this.isCalibrating) {
-      const p=this.getPointerPos(e);
-      this.addCalibPoint(p.x,p.y);
-      return;
-    }
-    const p=this.getPointerPos(e);
-    if(this.isOverCar(p.x,p.y)) {
-      this.isDragging=true;
-      this.dragStart={x:p.x,y:p.y,carX:this.carScreen.x,carY:this.carScreen.y};
-    }
-  }
-  
-  onMouseMove(e) {
-    if(!this.isDragging) return;
-    const p=this.getPointerPos(e);
-    this.carScreen.x=this.dragStart.carX+(p.x-this.dragStart.x);
-    this.carScreen.y=this.dragStart.carY+(p.y-this.dragStart.y);
-  }
-  
-  onMouseUp(e) { this.isDragging=false; }
-  
-  // ==================== CONTROLS ====================
-  updateSteering(v) {
-    this.vehicle.steering=parseFloat(v);
-    document.getElementById('steerVal').textContent=v+'°';
-  }
-  
-  setSpeed(dir) {
-    this.simSpeed=dir;
-    this.vehicle.speed=dir;
-  }
-  
-  resetCar() {
-    this.carScreen.x=window.innerWidth/2;
-    this.carScreen.y=window.innerHeight*0.6;
-    this.carScreen.rotation=-90;
-    this.vehicle.reset();
-    this.vehicle.steering=parseFloat(document.getElementById('steering').value);
-    this.showToast('गाड़ी रीसेट हो गई');
-  }
-  
-  toggleSimulation() {
-    this.showPath=!this.showPath;
-    document.getElementById('btnPath').textContent=this.showPath?'🔮 पाथ चालू':'🔮 पाथ बंद';
-  }
-  
-  toggleDebug() {
-    document.getElementById('debugPanel').classList.toggle('show');
-  }
-  
-  showDebug() {
-    document.getElementById('startScreen').style.display='none';
-    document.getElementById('debugPanel').classList.add('show');
-    document.getElementById('topBar').style.display='flex';
-  }
-  
-  showToast(msg) {
-    const el=document.getElementById('instructionToast');
-    el.textContent=msg; el.classList.add('show');
-    setTimeout(()=>el.classList.remove('show'),2500);
-  }
-  
-  // ==================== RAMP ====================
-  toggleRamp() {
-    this.rampMode=!this.rampMode;
-    document.getElementById('rampPanel').classList.toggle('show',this.rampMode);
-    this.updateRamp();
-  }
-  
-  updateRamp() {
-    const h=parseInt(document.getElementById('rampHeight').value)/100;
-    const l=parseInt(document.getElementById('rampLength').value)/100;
-    const d=parseInt(document.getElementById('drivewayW').value)/100;
-    const angle=Math.atan(h/l)*180/Math.PI;
-    this.rampData={height:h,length:l,driveway:d,angle};
-    document.getElementById('rampHeightVal').textContent=(h*100).toFixed(0)+' cm';
-    document.getElementById('rampLengthVal').textContent=l.toFixed(1)+' m';
-    document.getElementById('drivewayWVal').textContent=d.toFixed(1)+' m';
-    document.getElementById('rampAngleVal').textContent=angle.toFixed(1)+'°';
-    
-    let warnings=[];
-    if(angle>CAR.approachAngle*0.8) warnings.push(`⚠️ रैंप कोण (${angle.toFixed(1)}°) अप्रोच एंगल (${CAR.approachAngle}°) के करीब!`);
-    if(d<CAR.mirrorWidth+0.3) warnings.push(`⚠️ ड्राइववे (${d.toFixed(1)}m) बहुत संकरी है!`);
-    if(h>CAR.groundClearance*0.8) warnings.push(`⚠️ रैंप ऊंचाई ग्राउंड क्लीयरेंस (${(CAR.groundClearance*100).toFixed(0)}cm) के करीब!`);
-    
-    const wEl=document.getElementById('rampWarning');
-    if(warnings.length) { wEl.innerHTML=warnings.join('<br>'); wEl.style.color='var(--danger)'; }
-    else { wEl.innerHTML='✓ रैंप पैरामीटर सामान्य'; wEl.style.color='var(--accent2)'; }
-  }
-  
-  // ==================== COLLISION ====================
-  checkGateCollision() {
-    if(!this.isCalibrated) return null;
-    const world=this.vehicle.worldPoints();
-    let gateLeft,gateRight;
-    if(this.calibrationMode===2&&this.gateLine) {
-      gateLeft=this.gateLine.p1; gateRight=this.gateLine.p2;
-    } else if(this.calibrationPoints.length>=2) {
-      gateLeft=this.calibrationPoints[0]; gateRight=this.calibrationPoints[1];
-    } else return null;
-    
-    const carPts=world.body.map(p=>this.worldToScreen(p.x,p.y));
-    const mirrorPts=world.mirrors.map(p=>this.worldToScreen(p.x,p.y));
-    
-    const gateDx=gateRight.x-gateLeft.x, gateDy=gateRight.y-gateLeft.y;
-    const gateLen=Math.hypot(gateDx,gateDy);
-    if(gateLen<1) return null;
-    
-    const lineA=gateDy, lineB=-gateDx, lineC=gateDx*gateLeft.y-gateDy*gateLeft.x;
-    const lineDenom=Math.hypot(lineA,lineB);
-    
-    const dists=[];
-    for(const p of[...carPts,...mirrorPts]) {
-      dists.push(Math.abs(lineA*p.x+lineB*p.y+lineC)/lineDenom);
-    }
-    const minClearancePx=Math.min(...dists);
-    const minClearanceM=minClearancePx/this.pixelsPerMeter;
-    
-    const gateUnitX=gateDx/gateLen, gateUnitY=gateDy/gateLen;
-    let minAlong=Infinity, maxAlong=-Infinity;
-    for(const p of[...carPts,...mirrorPts]) {
-      const along=(p.x-gateLeft.x)*gateUnitX+(p.y-gateLeft.y)*gateUnitY;
-      minAlong=Math.min(minAlong,along); maxAlong=Math.max(maxAlong,along);
-    }
-    const leftGapM=Math.max(0,minAlong/this.pixelsPerMeter);
-    const rightGapM=Math.max(0,(gateLen-maxAlong)/this.pixelsPerMeter);
-    
-    return {
-      gateWidthM:this.gateWidthM,
-      bodyWidthM:CAR.width,
-      mirrorWidthM:CAR.mirrorWidth,
-      leftGapM, rightGapM, minClearanceM,
-      isInside:minAlong>-0.2*this.pixelsPerMeter&&maxAlong<gateLen+0.2*this.pixelsPerMeter
-    };
-  }
-  
-  updateInfoStrip(collision) {
-    if(!collision) {
-      document.getElementById('infoGate').textContent=this.gateWidthM.toFixed(2)+'m';
-      document.getElementById('infoBody').textContent=CAR.width.toFixed(3)+'m';
-      document.getElementById('infoMirror').textContent=CAR.mirrorWidth.toFixed(3)+'m';
-      document.getElementById('infoLeft').textContent='—';
-      document.getElementById('infoRight').textContent='—';
-      document.getElementById('infoMin').textContent='—';
-      return;
-    }
-    const setVal=(id,val,cls)=>{
-      const el=document.getElementById(id);
-      el.textContent=typeof val==='number'?val.toFixed(2)+'m':val;
-      el.className='num '+(cls||'');
-    };
-    setVal('infoGate',collision.gateWidthM);
-    setVal('infoBody',collision.bodyWidthM);
-    setVal('infoMirror',collision.mirrorWidthM);
-    setVal('infoLeft',Math.max(0,collision.leftGapM),collision.leftGapM<0.15?'danger':collision.leftGapM<0.30?'warn':'ok');
-    setVal('infoRight',Math.max(0,collision.rightGapM),collision.rightGapM<0.15?'danger':collision.rightGapM<0.30?'warn':'ok');
-    setVal('infoMin',collision.minClearanceM,collision.minClearanceM<0.10?'danger':collision.minClearanceM<0.25?'warn':'ok');
-    
-    const banner=document.getElementById('gateCollisionBar');
-    if(collision.minClearanceM<0.05) {
-      banner.textContent='🚨 टक्कर का खतरा! बहुत तंग!';
-      banner.className='danger show';
-    } else if(collision.minClearanceM<0.20) {
-      banner.textContent='⚠️ बहुत तंग! सावधानी से';
-      banner.className='tight show';
-    } else if(collision.minClearanceM<0.40) {
-      banner.textContent='✓ फिट हो सकती है, संकरी जगह';
-      banner.className='safe show';
-    } else {
-      banner.className=''; banner.style.display='none';
-    }
-  }
-  
-  // ==================== RENDER ====================
-  loop(timestamp) {
-    const dt=Math.min((timestamp-this.lastTime)/1000,0.05);
-    this.lastTime=timestamp;
-    this.frameCount++;
-    
-    this.vehicle.update(dt);
-    
-    if(Math.abs(this.simSpeed)>0.01) {
-      this.carScreen.rotation=this.vehicle.heading*180/Math.PI;
-      this.carScreen.x+=this.vehicle.speed*2*dt*this.pixelsPerMeter*Math.cos(this.vehicle.heading);
-      this.carScreen.y+=this.vehicle.speed*2*dt*this.pixelsPerMeter*Math.sin(this.vehicle.heading);
-    } else {
-      this.vehicle.heading=this.carScreen.rotation*Math.PI/180;
-    }
-    
-    const ctx=this.ctx;
-    const W=window.innerWidth, H=window.innerHeight;
-    ctx.clearRect(0,0,W,H);
-    
-    this.drawCalibration(ctx);
-    if(this.showPath) this.drawPath(ctx);
-    this.drawCar(ctx);
-    if(this.rampMode) this.drawRampIndicator(ctx);
-    
-    if(this.frameCount%10===0) {
-      const col=this.checkGateCollision();
-      this.updateInfoStrip(col);
-    }
-    requestAnimationFrame(t=>this.loop(t));
-  }
-  
-  drawCalibration(ctx) {
-    for(let i=0;i<this.calibrationPoints.length;i++) {
-      const p=this.calibrationPoints[i];
-      ctx.beginPath(); ctx.arc(p.x,p.y,12,0,Math.PI*2);
-      ctx.fillStyle=i<2?COLORS.gatePost:COLORS.gate;
-      ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(i+1,p.x,p.y+4);
-    }
-    if(this.calibrationPoints.length>=2) {
-      ctx.beginPath();
-      ctx.moveTo(this.calibrationPoints[0].x,this.calibrationPoints[0].y);
-      for(let i=1;i<this.calibrationPoints.length;i++) ctx.lineTo(this.calibrationPoints[i].x,this.calibrationPoints[i].y);
-      if(this.calibrationMode===4&&this.calibrationPoints.length===4) ctx.closePath();
-      ctx.strokeStyle=COLORS.gate; ctx.lineWidth=3;
-      ctx.setLineDash([8,4]); ctx.stroke(); ctx.setLineDash([]);
-      const p1=this.calibrationPoints[0],p2=this.calibrationPoints[1];
-      const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
-      ctx.fillStyle=COLORS.gate; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
-      ctx.fillText(`${this.gateWidthM.toFixed(2)}m (${(this.gateWidthM/0.3048).toFixed(1)}ft)`,mx,my-10);
-    }
-  }
-  
-  drawCar(ctx) {
-    const cx=this.carScreen.x, cy=this.carScreen.y;
-    const scale=this.carScreen.scale*this.pixelsPerMeter/100;
-    const rot=this.carScreen.rotation*Math.PI/180;
-    
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(rot);
-    ctx.scale(scale,scale);
-    
-    const Lf=(CAR.frontOverhang+CAR.wheelbase)*100;
-    const Lr=CAR.rearOverhang*100;
-    const W2=(CAR.width/2)*100;
-    const M2=(CAR.mirrorWidth/2)*100;
-    const WB=CAR.wheelbase*100;
-    const TW2=(CAR.trackWidth/2)*100;
-    const WR=30;
-    
-    // Body
-    ctx.beginPath();
-    ctx.moveTo(Lf,-W2+10); ctx.lineTo(Lf-20,-W2);
-    ctx.lineTo(-Lr,-W2); ctx.lineTo(-Lr-15,-W2+10);
-    ctx.lineTo(-Lr-15,W2-10); ctx.lineTo(-Lr,W2);
-    ctx.lineTo(Lf-20,W2); ctx.lineTo(Lf,W2-10);
-    ctx.closePath();
-    ctx.fillStyle=COLORS.carBody; ctx.fill();
-    ctx.strokeStyle=COLORS.carStroke; ctx.lineWidth=2.5; ctx.stroke();
-    
-    // Windshield
-    ctx.beginPath();
-    ctx.moveTo(Lf-60,-W2+5); ctx.lineTo(Lf-60,W2-5);
-    ctx.lineTo(Lf-20,W2-8); ctx.lineTo(Lf-20,-W2+8);
-    ctx.closePath(); ctx.fillStyle=COLORS.carGlass; ctx.fill();
-    
-    // Rear window
-    ctx.beginPath();
-    ctx.moveTo(-Lr+10,-W2+5); ctx.lineTo(-Lr+10,W2-5);
-    ctx.lineTo(-Lr+40,W2-8); ctx.lineTo(-Lr+40,-W2+8);
-    ctx.closePath(); ctx.fillStyle=COLORS.carGlass; ctx.fill();
-    
-    // Side windows
-    ctx.beginPath();
-    ctx.moveTo(Lf-65,-W2+8); ctx.lineTo(Lf-65,W2-8);
-    ctx.lineTo(-Lr+45,W2-8); ctx.lineTo(-Lr+45,-W2+8);
-    ctx.closePath(); ctx.fillStyle=COLORS.carGlass; ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1; ctx.stroke();
-    
-    // Mirrors
-    ctx.beginPath();
-    ctx.moveTo(30,-W2); ctx.lineTo(30,-M2); ctx.lineTo(50,-M2); ctx.lineTo(50,-W2);
-    ctx.moveTo(30,W2); ctx.lineTo(30,M2); ctx.lineTo(50,M2); ctx.lineTo(50,W2);
-    ctx.fillStyle=COLORS.mirror; ctx.fill();
-    ctx.strokeStyle='#ffaa00'; ctx.lineWidth=1.5; ctx.stroke();
-    
-    // Wheels
-    const wheelPos=[[WB,-TW2],[WB,TW2],[0,-TW2],[0,TW2]];
-    for(const wp of wheelPos) {
-      ctx.beginPath(); ctx.arc(wp[0],wp[1],WR,0,Math.PI*2);
-      ctx.fillStyle=COLORS.wheel; ctx.fill();
-      ctx.strokeStyle='#555'; ctx.lineWidth=2; ctx.stroke();
-      ctx.beginPath(); ctx.arc(wp[0],wp[1],10,0,Math.PI*2);
-      ctx.fillStyle='#777'; ctx.fill();
-    }
-    
-    // Steering indicator on front wheels
-    const steerRad=this.vehicle.steering*Math.PI/180;
-    for(const side of[-1,1]) {
-      ctx.save();
-      ctx.translate(WB,side*TW2);
-      ctx.rotate(steerRad);
-      ctx.beginPath(); ctx.moveTo(-15,0); ctx.lineTo(15,0);
-      ctx.strokeStyle=COLORS.safe; ctx.lineWidth=3; ctx.stroke();
-      ctx.restore();
-    }
-    
-    // Labels
-    ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('TATA PUNCH',20,0);
-    ctx.font='9px sans-serif';
-    ctx.fillText(`${CAR.length}m x ${CAR.width}m`,20,14);
-    
-    // Ground clearance indicator
-    ctx.beginPath();
-    ctx.moveTo(-Lr+20,W2+15); ctx.lineTo(Lf-20,W2+15);
-    ctx.strokeStyle='rgba(0,212,170,0.5)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='var(--accent2)'; ctx.font='9px sans-serif';
-    ctx.fillText(`GC: ${(CAR.groundClearance*100).toFixed(0)}mm`,20,W2+28);
-    
-    ctx.restore();
-  }
-  
-  drawPath(ctx) {
-    const pred=this.vehicle.predict(80,0.05);
-    const env=this.vehicle.sweptEnvelope(pred);
-    if(env.length<2) return;
-    
-    // Draw outer envelope
-    ctx.beginPath();
-    const start=env[0];
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-    for(const frame of env) {
-      for(const p of frame) {
-        const sp=this.worldToScreen(p.x-this.vehicle.x,p.y-this.vehicle.y);
-        minX=Math.min(minX,sp.x); minY=Math.min(minY,sp.y);
-        maxX=Math.max(maxX,sp.x); maxY=Math.max(maxY,sp.y);
-      }
-    }
-    const centerX=(minX+maxX)/2, centerY=(minY+maxY)/2;
-    const spread=Math.max(maxX-minX,maxY-minY);
-    
-    // Determine color based on gate clearance
-    let pathColor=COLORS.pathSafe;
-    const col=this.checkGateCollision();
-    if(col) {
-      if(col.minClearanceM<0.10) pathColor=COLORS.pathDanger;
-      else if(col.minClearanceM<0.25) pathColor=COLORS.pathTight;
-    }
-    
-    // Draw center path
-    ctx.beginPath();
-    for(let i=0;i<pred.length;i++) {
-      const sp=this.worldToScreen(pred[i].x-this.vehicle.x,pred[i].y-this.vehicle.y);
-      if(i===0) ctx.moveTo(sp.x,sp.y); else ctx.lineTo(sp.x,sp.y);
-    }
-    ctx.strokeStyle=pathColor.replace('0.3','0.8').replace('0.2','0.8').replace('0.4','0.8');
-    ctx.lineWidth=3; ctx.stroke();
-    
-    // Draw envelope boundary
-    for(let i=0;i<env.length-1;i++) {
-      const f1=env[i], f2=env[i+1];
-      for(let j=0;j<f1.length;j++) {
-        const s1=this.worldToScreen(f1[j].x-this.vehicle.x,f1[j].y-this.vehicle.y);
-        const s2=this.worldToScreen(f2[j].x-this.vehicle.x,f2[j].y-this.vehicle.y);
-        ctx.beginPath(); ctx.moveTo(s1.x,s1.y); ctx.lineTo(s2.x,s2.y);
-        ctx.strokeStyle=pathColor; ctx.lineWidth=2; ctx.stroke();
-      }
-    }
-    
-    // Draw ICR (Instantaneous Center of Rotation)
-    const steerRad=this.vehicle.steering*Math.PI/180;
-    if(Math.abs(steerRad)>0.01) {
-      const R=CAR.wheelbase/Math.tan(steerRad);
-      const icrX=this.vehicle.x-R*Math.sin(this.vehicle.heading);
-      const icrY=this.vehicle.y+R*Math.cos(this.vehicle.heading);
-      const sp=this.worldToScreen(icrX-this.vehicle.x,icrY-this.vehicle.y);
-      ctx.beginPath(); ctx.arc(sp.x,sp.y,6,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
-      ctx.fillStyle='#fff'; ctx.font='10px sans-serif'; ctx.textAlign='center';
-      ctx.fillText('ICR',sp.x,sp.y-10);
-    }
-  }
-  
-  drawRampIndicator(ctx) {
-    // Simple visual indicator for ramp mode
-    const W=window.innerWidth, H=window.innerHeight;
-    ctx.fillStyle='rgba(255,170,0,0.08)';
-    ctx.fillRect(W-120,80,110,100);
-    ctx.strokeStyle='rgba(255,170,0,0.3)'; ctx.lineWidth=1; ctx.strokeRect(W-120,80,110,100);
-    ctx.fillStyle='var(--warn)'; ctx.font='11px sans-serif'; ctx.textAlign='left';
-    ctx.fillText('🚧 रैंप मोड',W-115,98);
-    ctx.fillStyle='var(--text2)'; ctx.font='10px sans-serif';
-    ctx.fillText(`ऊंचाई: ${(this.rampData.height*100).toFixed(0)}cm`,W-115,114);
-    ctx.fillText(`लंबाई: ${this.rampData.length.toFixed(1)}m`,W-115,128);
-    ctx.fillText(`कोण: ${this.rampData.angle.toFixed(1)}°`,W-115,142);
-    ctx.fillText(`ड्राइववे: ${this.rampData.driveway.toFixed(1)}m`,W-115,156);
-    
-    // Phone tilt indicator
-    if(this.deviceSlope!==null) {
-      ctx.fillText(`फोन झुकाव: ${this.deviceSlope.toFixed(1)}°`,W-115,170);
-    }
-  }
-}
+class App{constructor(){this.v=document.getElementById('v');this.cv=document.getElementById('c');this.x=this.cv.getContext('2d');this.car=new Veh();this.st=null;this.fc='environment';this.cp=[];this.cm=2;this.gw=2.134;this.pm=130;this.H=null;this.iH=null;this.cb=false;this.cg=false;this.sh=false;this.ra=false;this.rd={h:0.1,l:2,d:3,a:2.9};this.scr={x:0,y:0,sc:1,r:-90};this.dg=false;this.rt=false;this.d0={x:0,y:0,cx:0,cy:0};this.td=0;this.ta=0;this.r0=0;this.sp=0;this.lt=0;this.fc2=0;this.sl=null;this.init();}init(){this.rs();window.addEventListener('resize',()=>this.rs());window.addEventListener('orientationchange',()=>setTimeout(()=>this.rs(),300));this.cv.addEventListener('touchstart',e=>this.ts(e),{passive:false});this.cv.addEventListener('touchmove',e=>this.tm(e),{passive:false});this.cv.addEventListener('touchend',e=>this.te(e));this.cv.addEventListener('mousedown',e=>this.md(e));window.addEventListener('mousemove',e=>this.mm(e));window.addEventListener('mouseup',e=>this.mu(e));if(window.DeviceOrientationEvent){window.addEventListener('deviceorientation',e=>{if(e.beta!==null){this.sl=e.beta;document.getElementById('dl').innerHTML=`<span class="o">${e.beta.toFixed(1)}°</span>`;}});}document.getElementById('ds').innerHTML=window.isSecureContext?'<span class="o">हाँ</span>':'<span class="x">नहीं</span>';this.scr.x=innerWidth/2;this.scr.y=innerHeight*0.65;requestAnimationFrame(t=>this.lp(t));}rs(){const dpr=devicePixelRatio||1;this.cv.width=innerWidth*dpr;this.cv.height=innerHeight*dpr;this.cv.style.width=innerWidth+'px';this.cv.style.height=innerHeight+'px';this.x.setTransform(dpr,0,0,dpr,0,0);}async sc(){try{const c={video:{facingMode:{ideal:this.fc},width:{ideal:1920},height:{ideal:1080}},audio:false};this.st=await navigator.mediaDevices.getUserMedia(c);this.v.srcObject=this.st;await this.v.play();this.ea('कैमरा चालू');document.getElementById('dp').innerHTML='<span class="o">मिली</span>';document.getElementById('dt').innerHTML='<span class="o">चालू</span>';document.getElementById('df').textContent=this.fc==='environment'?'पिछला':'आगे';setTimeout(()=>{this.uz();this.oc();},600);}catch(e){document.getElementById('dp').innerHTML=`<span class="x">${e.name}</span>`;alert('कैमरा नहीं मिला: '+e.message);}}uz(){if(this.v.videoWidth)document.getElementById('dz').textContent=`${this.v.videoWidth}×${this.v.videoHeight}`;}async sw(){if(!this.st)return;this.fc=this.fc==='environment'?'user':'environment';this.st.getTracks().forEach(t=>t.stop());await this.sc();}stop(){if(this.st){this.st.getTracks().forEach(t=>t.stop());this.st=null;}this.v.srcObject=null;}ea(m){document.getElementById('ss').style.display='none';this.v.style.display='block';document.getElementById('top').style.display='flex';document.getElementById('pill').classList.add('s');document.getElementById('f1').style.display='flex';document.getElementById('f2').style.display='flex';document.getElementById('f3').style.display='flex';this.cv.classList.add('a');document.getElementById('sg').textContent=this.gw.toFixed(2)+' m';}up(){document.getElementById('ss').style.display='none';document.getElementById('fb').classList.add('s');this.ea('फोटो मोड');document.getElementById('fi').click();}hf(e){const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f);const i=document.getElementById('fbi'),v=document.getElementById('fbv');if(f.type.startsWith('video')){i.style.display='none';v.style.display='block';v.src=u;v.play();}else{v.style.display='none';i.style.display='block';i.src=u;}setTimeout(()=>this.oc(),500);}os(){document.getElementById('sheet').classList.add('o');}cs(){document.getElementById('sheet').classList.remove('o');}oc(){this.cg=true;this.cp=[];this.H=null;this.iH=null;this.cb=false;document.getElementById('cm').classList.add('s');this.uch();}cc(){this.cg=false;document.getElementById('cm').classList.remove('s');}or(){this.ur();document.getElementById('rm').classList.add('s');}cr(){document.getElementById('rm').classList.remove('s');}td(){document.getElementById('db').classList.toggle('s');}si(t){const el=document.getElementById('ins');el.textContent=t;el.classList.add('s');setTimeout(()=>el.classList.remove('s'),2000);}scm(m){this.cm=m;document.querySelectorAll('.ta').forEach((t,i)=>t.classList.toggle('a',(i===0&&m===2)||(i===1&&m===4)));this.cp=[];this.uch();}uch(){const el=document.getElementById('ch');if(this.cm===2){if(this.cp.length===0)el.innerHTML='<b>बाएं</b> पिलर पर टैप करें';else if(this.cp.length===1)el.innerHTML='<b>दाएं</b> पिलर पर टैप करें';else el.innerHTML='✓ दोनों बिंदु मिल गए!';}else{const l=['बाएं-नीचे','दाएं-नीचे','दाएं-ऊपर','बाएं-ऊपर'];if(this.cp.length<4)el.innerHTML=`<b>${l[this.cp.length]}</b> कोना टैप करें`;else el.innerHTML='✓ चारों बिंदु मिल गए!';}}ug(){const ft=parseFloat(document.getElementById('gf').value)||7;this.gw=ft*0.3048;document.getElementById('gm').value=this.gw.toFixed(3);}ugm(){const m=parseFloat(document.getElementById('gm').value)||2.134;this.gw=m;document.getElementById('gf').value=(m/0.3048).toFixed(2);}acp(sx,sy){this.cp.push({x:sx,y:sy});this.uch();if(this.cm===2&&this.cp.length===2){const p1=this.cp[0],p2=this.cp[1];this.pm=Math.hypot(p2.x-p1.x,p2.y-p1.y)/this.gw;document.getElementById('dp2').textContent=this.pm.toFixed(1);}}fc(){if(this.cm===2){if(this.cp.length<2){this.si('दोनों पिलर टैप करें');return;}const p1=this.cp[0],p2=this.cp[1];this.pm=Math.hypot(p2.x-p1.x,p2.y-p1.y)/this.gw;this.gl={p1,p2};}else{if(this.cp.length<4){this.si('चारों कोने टैप करें');return;}this.H=sH(this.cp);this.iH=iH(this.H);const p1=this.cp[0],p2=this.cp[1];this.pm=Math.hypot(p2.x-p1.x,p2.y-p1.y)/this.gw;}this.cb=true;this.cg=false;document.getElementById('cm').classList.remove('s');document.getElementById('dc').innerHTML='<span class="o">हो गया</span>';document.getElementById('dp2').textContent=this.pm.toFixed(1);this.si('✓ कैलिब्रेशन पूरा');}rcb(){this.cp=[];this.H=null;this.iH=null;this.cb=false;this.uch();document.getElementById('dc').innerHTML='<span class="x">नहीं</span>';}w2s(wx,wy){if(this.H&&this.iH){const nx=wx/this.gw,ny=wy/(this.gw*2);return aH(this.H,{x:nx,y:ny});}return{x:this.scr.x+wx*this.pm,y:this.scr.y+wy*this.pm};}po(e){const r=this.cv.getBoundingClientRect();const cx=e.touches?e.touches[0].clientX:e.clientX;const cy=e.touches?e.touches[0].clientY:e.clientY;return{x:cx-r.left,y:cy-r.top};}ov(x,y){const dx=x-this.scr.x,dy=y-this.scr.y;const lp=CAR.length*this.pm*0.5+30,wp=CAR.width*this.pm*0.5+30;const r=this.scr.r*Math.PI/180;const lx=dx*Math.cos(-r)-dy*Math.sin(-r),ly=dx*Math.sin(-r)+dy*Math.cos(-r);return Math.abs(lx)<lp&&Math.abs(ly)<wp;}ts(e){if(this.cg){e.preventDefault();const p=this.po(e);this.acp(p.x,p.y);return;}if(e.touches.length===1){const p=this.po(e);if(this.ov(p.x,p.y)){this.dg=true;this.d0={x:p.x,y:p.y,cx:this.scr.x,cy:this.scr.y};}}else if(e.touches.length===2){this.rt=true;this.dg=false;const t1=e.touches[0],t2=e.touches[1];this.td=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);this.ta=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);this.r0=this.scr.r;}}tm(e){e.preventDefault();if(this.dg&&e.touches.length===1){const p=this.po(e);this.scr.x=this.d0.cx+(p.x-this.d0.x);this.scr.y=this.d0.cy+(p.y-this.d0.y);this.sc();}else if(this.rt&&e.touches.length===2){const t1=e.touches[0],t2=e.touches[1];const a=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);this.scr.r=this.r0+(a-this.ta)*180/Math.PI;this.car.h=this.scr.r*Math.PI/180;}}te(e){this.dg=false;this.rt=false;}md(e){if(this.cg){const p=this.po(e);this.acp(p.x,p.y);return;}const p=this.po(e);if(this.ov(p.x,p.y)){this.dg=true;this.d0={x:p.x,y:p.y,cx:this.scr.x,cy:this.scr.y};}}mm(e){if(!this.dg)return;const p=this.po(e);this.scr.x=this.d0.cx+(p.x-this.d0.x);this.scr.y=this.d0.cy+(p.y-this.d0.y);this.sc();}mu(e){this.dg=false;}sc(){this.car.x=0;this.car.y=0;}ss(v){this.car.s=parseFloat(v);document.getElementById('vs').textContent=v+'°';document.getElementById('is').value=v;}sp(d){this.sp=d;this.car.sp=d;if(d!==0)this.sc();}rc(){this.scr.x=innerWidth/2;this.scr.y=innerHeight*0.65;this.scr.r=-90;this.car.r();this.car.s=parseFloat(document.getElementById('is').value);this.si('गाड़ी रीसेट');}tp(){this.sh=!this.sh;document.getElementById('f3').classList.toggle('on',this.sh);this.si(this.sh?'पाथ चालू':'पाथ बंद');}ur(){const h=parseInt(document.getElementById('rh').value)/100;const l=parseInt(document.getElementById('rl').value)/100;const d=parseInt(document.getElementById('rd').value)/100;const a=Math.atan(h/l)*180/Math.PI;this.rd={h,l,d,a};document.getElementById('rhv').textContent=(h*100).toFixed(0)+' cm';document.getElementById('rlv').textContent=l.toFixed(1)+' m';document.getElementById('rdv').textContent=d.toFixed(1)+' m';let w=[];if(a>CAR.approachAngle*0.8)w.push(`⚠️ कोण (${a.toFixed(1)}°) अप्रोच एंगल के करीब!`);if(d<CAR.mirrorWidth+0.3)w.push(`⚠️ ड्राइववे बहुत संकरी!`);if(h>CAR.groundClearance*0.8)w.push(`⚠️ ऊंचाई क्लीयरेंस के करीब!`);document.getElementById('rw').innerHTML=w.length?w.join('<br>'):'✓ सामान्य';}cl(){if(!this.cb)return null;const w=this.car.cn();let gl,gr;if(this.cm===2&&this.gl){gl=this.gl.p1;gr=this.gl.p2;}else if(this.cp.length>=2){gl=this.cp[0];gr=this.cp[1];}else return null;const b=w.body.map(p=>this.w2s(p.x,p.y));const m=w.mirrors.map(p=>this.w2s(p.x,p.y));const al=[...b,...m];const gdx=gr.x-gl.x,gdy=gr.y-gl.y,glen=Math.hypot(gdx,gdy);if(glen<1)return null;const A=gdy,B=-gdx,C=gdx*gl.y-gdy*gl.x,den=Math.hypot(A,B);const ds=al.map(p=>Math.abs(A*p.x+B*p.y+C)/den);const minD=Math.min(...ds);const minM=minD/this.pm;const ux=gdx/glen,uy=gdy/glen;let mn=Infinity,mx=-Infinity;for(const p of al){const along=(p.x-gl.x)*ux+(p.y-gl.y)*uy;mn=Math.min(mn,along);mx=Math.max(mx,along);}const left=Math.max(0,mn/this.pm),right=Math.max(0,(glen-mx)/this.pm);return{gate:this.gw,body:CAR.width,mirror:CAR.mirrorWidth,left,right,min:minM};}ui(c){if(!c){document.getElementById('pg').textContent=this.gw.toFixed(2)+'m';document.getElementById('pb').textContent=CAR.width.toFixed(2)+'m';document.getElementById('pm').textContent=CAR.mirrorWidth.toFixed(2)+'m';document.getElementById('pn').textContent='—';return;}const set=(id,v,cls)=>{const el=document.getElementById(id);el.textContent=typeof v==='number'?v.toFixed(2)+'m':v;el.className='n '+(cls||'');};set('pg',c.gate);set('pb',c.body);set('pm',c.mirror);const mc=c.min<0.10?'x':c.min<0.25?'w':'o';set('pn',Math.max(0,c.min),mc);const t=document.getElementById('toast');if(c.min<0.05){t.textContent='🚨 टक्कर का खतरा!';t.className='x s';}else if(c.min<0.20){t.textContent='⚠️ बहुत तंग!';t.className='w s';}else if(c.min<0.40){t.textContent='✓ फिट हो सकती है';t.className='o s';}else{t.className='';t.style.display='none';}}lp(ts){const dt=Math.min((ts-this.lt)/1000,0.05);this.lt=ts;this.fc2++;if(Math.abs(this.sp)>0.01){this.car.up(dt);this.scr.r=this.car.h*180/Math.PI;this.scr.x+=this.car.sp*2.5*dt*this.pm*Math.cos(this.car.h);this.scr.y+=this.car.sp*2.5*dt*this.pm*Math.sin(this.car.h);}else{this.car.h=this.scr.r*Math.PI/180;this.car.x=0;this.car.y=0;}const X=this.x,W=innerWidth,H=innerHeight;X.clearRect(0,0,W,H);this.dc(X);if(this.sh)this.dp(X);this.dr(X);if(this.ra)this.dra(X);if(this.fc2%6===0){const col=this.cl();this.ui(col);}requestAnimationFrame(t=>this.lp(t));}dc(X){for(let i=0;i<this.cp.length;i++){const p=this.cp[i];X.beginPath();X.arc(p.x,p.y,14,0,Math.PI*2);X.fillStyle=i<2?CLR.gp:CLR.gt;X.fill();X.strokeStyle='#fff';X.lineWidth=2.5;X.stroke();X.fillStyle='#fff';X.font='bold 13px sans-serif';X.textAlign='center';X.textBaseline='middle';X.fillText(i+1,p.x,p.y);}if(this.cp.length>=2){X.beginPath();X.moveTo(this.cp[0].x,this.cp[0].y);for(let i=1;i<this.cp.length;i++)X.lineTo(this.cp[i].x,this.cp[i].y);if(this.cm===4&&this.cp.length===4)X.closePath();X.strokeStyle=CLR.gt;X.lineWidth=4;X.setLineDash([10,5]);X.stroke();X.setLineDash([]);const p1=this.cp[0],p2=this.cp[1];X.fillStyle=CLR.gt;X.font='bold 13px sans-serif';X.textAlign='center';X.fillText(`${this.gw.toFixed(2)}m (${(this.gw/0.3048).toFixed(1)}ft)`,(p1.x+p2.x)/2,(p1.y+p2.y)/2-12);}}dp(X){if(Math.abs(this.car.s)<0.5)return;const pr=this.car.pr(this.car.s,60,0.05);const ev=this.car.ev(pr);if(ev.length<2)return;let pc=CLR.ps;const col=this.cl();if(col){if(col.min<0.10)pc=CLR.pd;else if(col.min<0.25)pc=CLR.pt;}X.beginPath();for(let i=0;i<pr.length;i++){const p=this.w2s(pr[i].x-this.car.x,pr[i].y-this.car.y);if(i===0)X.moveTo(p.x,p.y);else X.lineTo(p.x,p.y);}X.strokeStyle=pc.replace('0.45','0.9').replace('0.5','0.9').replace('0.35','0.9');X.lineWidth=4;X.stroke();for(let i=0;i<ev.length-1;i++){const f1=ev[i],f2=ev[i+1];for(let j=0;j<f1.length;j++){const s1=this.w2s(f1[j].x-this.car.x,f1[j].y-this.car.y);const s2=this.w2s(f2[j].x-this.car.x,f2[j].y-this.car.y);X.beginPath();X.moveTo(s1.x,s1.y);X.lineTo(s2.x,s2.y);X.strokeStyle=pc;X.lineWidth=2;X.stroke();}}const sr=this.car.s*Math.PI/180;if(Math.abs(sr)>0.01){const R=CAR.wheelbase/Math.tan(sr);const icrx=this.car.x-R*Math.sin(this.car.h),icry=this.car.y+R*Math.cos(this.car.h);const sp=this.w2s(icrx-this.car.x,icry-this.car.y);X.beginPath();X.arc(sp.x,sp.y,8,0,Math.PI*2);X.fillStyle='rgba(255,255,255,0.7)';X.fill();X.strokeStyle='#fff';X.lineWidth=1.5;X.stroke();X.fillStyle='#fff';X.font='11px sans-serif';X.textAlign='center';X.fillText('ICR',sp.x,sp.y-12);}}dr(X){const cx=this.scr.x,cy=this.scr.y;const sc=this.scr.sc*this.pm/100;const rt=this.scr.r*Math.PI/180;X.save();X.translate(cx,cy);X.rotate(rt);X.scale(sc,sc);const Lf=(CAR.frontOverhang+CAR.wheelbase)*100;const Lr=CAR.rearOverhang*100;const W2=(CAR.width/2)*100;const M2=(CAR.mirrorWidth/2)*100;const WB=CAR.wheelbase*100;const TW2=(CAR.trackWidth/2)*100;const WR=32;X.beginPath();X.moveTo(Lf,-W2+10);X.lineTo(Lf-20,-W2);X.lineTo(-Lr,-W2);X.lineTo(-Lr-15,-W2+10);X.lineTo(-Lr-15,W2-10);X.lineTo(-Lr,W2);X.lineTo(Lf-20,W2);X.lineTo(Lf,W2-10);X.closePath();X.fillStyle=CLR.b;X.fill();X.strokeStyle=CLR.st;X.lineWidth=2.5;X.stroke();X.beginPath();X.moveTo(Lf-60,-W2+5);X.lineTo(Lf-60,W2-5);X.lineTo(Lf-20,W2-8);X.lineTo(Lf-20,-W2+8);X.closePath();X.fillStyle=CLR.g;X.fill();X.beginPath();X.moveTo(-Lr+10,-W2+5);X.lineTo(-Lr+10,W2-5);X.lineTo(-Lr+40,W2-8);X.lineTo(-Lr+40,-W2+8);X.closePath();X.fillStyle=CLR.g;X.fill();X.beginPath();X.moveTo(Lf-65,-W2+8);X.lineTo(Lf-65,W2-8);X.lineTo(-Lr+45,W2-8);X.lineTo(-Lr+45,-W2+8);X.closePath();X.fillStyle='rgba(100,180,255,0.08)';X.fill();X.strokeStyle='rgba(255,255,255,0.15)';X.lineWidth=1;X.stroke();X.beginPath();X.moveTo(30,-W2);X.lineTo(30,-M2);X.lineTo(50,-M2);X.lineTo(50,-W2);X.moveTo(30,W2);X.lineTo(30,M2);X.lineTo(50,M2);X.lineTo(50,W2);X.fillStyle=CLR.m;X.fill();X.strokeStyle='#ffaa00';X.lineWidth=1.5;X.stroke();const wp=[[WB,-TW2],[WB,TW2],[0,-TW2],[0,TW2]];for(const w of wp){X.beginPath();X.arc(w[0],w[1],WR,0,Math.PI*2);X.fillStyle=CLR.w;X.fill();X.strokeStyle='#444';X.lineWidth=2;X.stroke();X.beginPath();X.arc(w[0],w[1],10,0,Math.PI*2);X.fillStyle='#666';X.fill();}const sr=this.car.s*Math.PI/180;for(const sd of[-1,1]){X.save();X.translate(WB,sd*TW2);X.rotate(sr);X.beginPath();X.moveTo(-18,0);X.lineTo(18,0);X.strokeStyle=CLR.s;X.lineWidth=3;X.stroke();X.restore();}X.fillStyle='#fff';X.font='bold 12px sans-serif';X.textAlign='center';X.fillText('TATA PUNCH',15,0);X.font='10px sans-serif';X.fillText(`${CAR.length}m × ${CAR.width}m`,15,14);X.beginPath();X.moveTo(-Lr+20,W2+18);X.lineTo(Lf-20,W2+18);X.strokeStyle='rgba(0,212,170,0.5)';X.lineWidth=1;X.setLineDash([4,4]);X.stroke();X.setLineDash([]);X.fillStyle=CLR.s;X.font='9px sans-serif';X.fillText(`GC: ${(CAR.groundClearance*100).toFixed(0)}mm`,15,W2+30);X.restore();}dra(X){const W=innerWidth;X.fillStyle='rgba(255,170,0,0.06)';X.fillRect(W-130,70,120,110);X.strokeStyle='rgba(255,170,0,0.25)';X.lineWidth=1;X.strokeRect(W-130,70,120,110);X.fillStyle=CLR.w;X.font='11px sans-serif';X.textAlign='left';X.fillText('🚧 रैंप मोड',W-125,90);X.fillStyle=CLR.t2;X.font='10px sans-serif';X.fillText(`ऊंचाई: ${(this.rd.h*100).toFixed(0)}cm`,W-125,108);X.fillText(`लंबाई: ${this.rd.l.toFixed(1)}m`,W-125,124);X.fillText(`कोण: ${this.rd.a.toFixed(1)}°`,W-125,140);X.fillText(`ड्राइववे: ${this.rd.d.toFixed(1)}m`,W-125,156);if(this.sl!==null){X.fillText(`फोन झुकाव: ${this.sl.toFixed(1)}°`,W-125,172);}}}
 
 const app=new App();
 </script>
