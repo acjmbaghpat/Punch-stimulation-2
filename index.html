@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Tata Punch Turning Simulator</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f2f4f7;
+  color:#17202a;
+}
+
+header{
+  background:#111827;
+  color:white;
+  padding:16px;
+  text-align:center;
+}
+
+header h1{
+  margin:0;
+  font-size:21px;
+}
+
+header p{
+  margin:6px 0 0;
+  opacity:.8;
+  font-size:13px;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:15px;
+}
+
+.controls{
+  background:white;
+  border-radius:14px;
+  padding:15px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  margin-bottom:15px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+}
+
+label{
+  font-size:13px;
+  font-weight:bold;
+  display:block;
+  margin-bottom:5px;
+}
+
+input,select{
+  width:100%;
+  padding:10px;
+  border:1px solid #ccd2d8;
+  border-radius:8px;
+  font-size:15px;
+}
+
+input[type=range]{
+  padding:0;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:0;
+  border-radius:9px;
+  background:#111827;
+  color:white;
+  font-size:15px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:.9;
+}
+
+.status{
+  margin-top:12px;
+  padding:12px;
+  border-radius:10px;
+  font-weight:bold;
+  text-align:center;
+  background:#e5e7eb;
+}
+
+.status.safe{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.status.warn{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.status.danger{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.canvasWrap{
+  background:white;
+  border-radius:14px;
+  padding:10px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  overflow:hidden;
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:auto;
+  border-radius:10px;
+  background:#dbe4ea;
+}
+
+.info{
+  margin-top:15px;
+  background:white;
+  border-radius:14px;
+  padding:15px;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.info h2{
+  font-size:18px;
+  margin-top:0;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+
+.stat{
+  background:#f5f7fa;
+  border-radius:10px;
+  padding:12px;
+}
+
+.stat small{
+  display:block;
+  color:#667085;
+}
+
+.stat strong{
+  font-size:18px;
+}
+
+.note{
+  font-size:12px;
+  color:#667085;
+  line-height:1.5;
+  margin-top:12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🚗 Tata Punch Turning Simulator</h1>
+  <p>Gate entry / 90° turn / driveway simulation</p>
+</header>
+
+<div class="container">
+
+  <div class="controls">
+
+    <div class="grid">
+
+      <div>
+        <label>Gate Width (ft)</label>
+        <input id="gate" type="number" value="7" step="0.1">
+      </div>
+
+      <div>
+        <label>Road Width (ft)</label>
+        <input id="road" type="number" value="18" step="0.5">
+      </div>
+
+      <div>
+        <label>Driveway / Ramp Width (ft)</label>
+        <input id="driveway" type="number" value="10" step="0.5">
+      </div>
+
+      <div>
+        <label>Turning Radius (m)</label>
+        <input id="radius" type="number" value="4.95" step="0.05">
+      </div>
+
+    </div>
+
+    <br>
+
+    <label>
+      Steering / Turn Angle:
+      <span id="angleText">45°</span>
+    </label>
+
+    <input
+      id="angle"
+      type="range"
+      min="5"
+      max="55"
+      value="45"
+      step="1"
+    >
+
+    <br><br>
+
+    <div class="grid">
+
+      <button onclick="preset(30)">
+        Gentle Turn
+      </button>
+
+      <button onclick="preset(45)">
+        Normal Turn
+      </button>
+
+      <button onclick="preset(55)">
+        Full Turn
+      </button>
+
+    </div>
+
+    <div id="status" class="status">
+      Simulation ready
+    </div>
+
+  </div>
+
+
+  <div class="canvasWrap">
+    <canvas id="canvas" width="1000" height="720"></canvas>
+  </div>
+
+
+  <div class="info">
+
+    <h2>📐 Tata Punch dimensions</h2>
+
+    <div class="stats">
+
+      <div class="stat">
+        <small>Length</small>
+        <strong>3876 mm</strong>
+      </div>
+
+      <div class="stat">
+        <small>Width</small>
+        <strong>1742 mm</strong>
+      </div>
+
+      <div class="stat">
+        <small>Wheelbase</small>
+        <strong>2445 mm</strong>
+      </div>
+
+      <div class="stat">
+        <small>Ground Clearance</small>
+        <strong>193 mm</strong>
+      </div>
+
+      <div class="stat">
+        <small>Gate</small>
+        <strong id="gateStat">7 ft</strong>
+      </div>
+
+      <div class="stat">
+        <small>Road</small>
+        <strong id="roadStat">18 ft</strong>
+      </div>
+
+    </div>
+
+    <div class="note">
+      Green trajectory = approximate vehicle path.
+      Red area = possible body clearance conflict.
+      This is a geometric planning tool and should not replace
+      an actual low-speed test with the vehicle.
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const gateInput = document.getElementById("gate");
+const roadInput = document.getElementById("road");
+const drivewayInput = document.getElementById("driveway");
+const radiusInput = document.getElementById("radius");
+const angleInput = document.getElementById("angle");
+
+const angleText = document.getElementById("angleText");
+const statusBox = document.getElementById("status");
+
+const gateStat = document.getElementById("gateStat");
+const roadStat = document.getElementById("roadStat");
+
+
+// ==============================
+// TATA PUNCH DIMENSIONS
+// ==============================
+
+const CAR_LENGTH = 3.876;  // metres
+const CAR_WIDTH  = 1.742;  // metres
+const WHEELBASE  = 2.445;  // metres
+
+// Approximate mirror-to-mirror width
+const MIRROR_WIDTH = 1.945;
+
+
+// ==============================
+// HELPERS
+// ==============================
+
+function ftToM(ft){
+  return ft * 0.3048;
+}
+
+function mToFt(m){
+  return m / 0.3048;
+}
+
+function preset(value){
+  angleInput.value = value;
+  draw();
+}
+
+
+// ==============================
+// DRAW ROAD
+// ==============================
+
+function draw(){
+
+  const gateFt = parseFloat(gateInput.value) || 7;
+  const roadFt = parseFloat(roadInput.value) || 18;
+  const drivewayFt = parseFloat(drivewayInput.value) || 10;
+
+  const radius = parseFloat(radiusInput.value) || 4.95;
+  const steeringAngle = parseFloat(angleInput.value);
+
+  angleText.textContent = steeringAngle + "°";
+
+  gateStat.textContent = gateFt + " ft";
+  roadStat.textContent = roadFt + " ft";
+
+
+  // Gate clearance
+
+  const gateM = ftToM(gateFt);
+  const roadM = ftToM(roadFt);
+
+  const bodyClearance = gateM - CAR_WIDTH;
+  const mirrorClearance = gateM - MIRROR_WIDTH;
+
+  let status = "";
+
+  if(bodyClearance <= 0){
+
+    status = "🔴 GATE TOO NARROW FOR BODY";
+
+    statusBox.className = "status danger";
+
+  }else if(mirrorClearance < 0){
+
+    status =
+      "🟠 BODY FITS, BUT MIRRORS WILL NOT CLEAR";
+
+    statusBox.className = "status warn";
+
+  }else if(mirrorClearance < 0.20){
+
+    status =
+      "🟡 PASSABLE BUT VERY TIGHT — DRIVE SLOWLY";
+
+    statusBox.className = "status warn";
+
+  }else{
+
+    status =
+      "🟢 GATE WIDTH IS GEOMETRICALLY SUFFICIENT";
+
+    statusBox.className = "status safe";
+
+  }
+
+  statusBox.textContent = status;
+
+
+  // ==============================
+  // CANVAS
+  // ==============================
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+
+  const scale = 85;
+
+  // Coordinate system:
+  // Gate is vertical on right side.
+  // Road runs horizontally.
+
+  const gateX = 820;
+  const gateCenterY = 360;
+
+  const roadTop =
+    gateCenterY - (roadM * scale)/2;
+
+  const roadBottom =
+    gateCenterY + (roadM * scale)/2;
+
+
+  // Road
+
+  ctx.fillStyle = "#555";
+  ctx.fillRect(
+    0,
+    roadTop,
+    canvas.width,
+    roadBottom-roadTop
+  );
+
+
+  // Road markings
+
+  ctx.strokeStyle = "#f7f7f7";
+  ctx.lineWidth = 3;
+  ctx.setLineDash([30,25]);
+
+  ctx.beginPath();
+  ctx.moveTo(0,(roadTop+roadBottom)/2);
+  ctx.lineTo(gateX,(roadTop+roadBottom)/2);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+
+  // House / driveway
+
+  const drivewayWidth = ftToM(drivewayFt) * scale;
+
+  ctx.fillStyle = "#ddd";
+
+  ctx.fillRect(
+    gateX,
+    gateCenterY-drivewayWidth/2,
+    canvas.width-gateX,
+    drivewayWidth
+  );
+
+
+  // Gate opening
+
+  const gatePx = gateM * scale;
+
+  ctx.fillStyle = "#b8b8b8";
+
+  ctx.fillRect(
+    gateX,
+    gateCenterY-gatePx/2,
+    15,
+    gatePx
+  );
+
+
+  ctx.fillRect(
+    gateX+gatePx*0,
+    gateCenterY+gatePx/2,
+    40,
+    10
+  );
+
+
+  // Gate label
+
+  ctx.fillStyle = "#111";
+  ctx.font = "bold 16px Arial";
+
+  ctx.fillText(
+    "7 ft GATE",
+    gateX-15,
+    gateCenterY-gatePx/2-12
+  );
+
+
+  // ==============================
+  // TURNING PATH
+  // ==============================
+
+  drawTurningPath(
+    gateX,
+    gateCenterY,
+    roadM,
+    radius,
+    steeringAngle,
+    scale
+  );
+
+
+  // Dimension labels
+
+  ctx.fillStyle = "#111";
+  ctx.font = "bold 14px Arial";
+
+  ctx.fillText(
+    "ROAD: " + roadFt + " ft",
+    20,
+    roadTop+25
+  );
+
+  ctx.fillText(
+    "PUNCH: 3.876m × 1.742m",
+    20,
+    roadBottom-20
+  );
+
+}
+
+
+// ==============================
+// TURNING PATH
+// ==============================
+
+function drawTurningPath(
+  gateX,
+  gateY,
+  roadM,
+  radius,
+  steeringAngle,
+  scale
+){
+
+  // Simplified circular turn.
+
+  const r = radius * scale;
+
+  const centerX = gateX - r;
+  const centerY = gateY + r;
+
+
+  // trajectory
+
+  ctx.strokeStyle = "#16a34a";
+  ctx.lineWidth = 5;
+
+  ctx.beginPath();
+
+  const startAngle = -Math.PI/2;
+
+  const endAngle =
+    startAngle +
+    (Math.PI/2) *
+    (steeringAngle/45);
+
+  ctx.arc(
+    centerX,
+    centerY,
+    r,
+    startAngle,
+    endAngle
+  );
+
+  ctx.stroke();
+
+
+  // Outer safety envelope
+
+  const outerR =
+    r + (CAR_WIDTH/2)*scale;
+
+  ctx.strokeStyle = "rgba(220,38,38,.35)";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    centerX,
+    centerY,
+    outerR,
+    startAngle,
+    endAngle
+  );
+
+  ctx.stroke();
+
+
+  // Inner envelope
+
+  const innerR =
+    Math.max(
+      1,
+      r - (CAR_WIDTH/2)*scale
+    );
+
+  ctx.strokeStyle = "rgba(22,163,74,.35)";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    centerX,
+    centerY,
+    innerR,
+    startAngle,
+    endAngle
+  );
+
+  ctx.stroke();
+
+
+  // Draw several car positions
+
+  const steps = 14;
+
+  for(let i=0;i<=steps;i++){
+
+    const t = i/steps;
+
+    const a =
+      startAngle +
+      (endAngle-startAngle)*t;
+
+    const x =
+      centerX + r*Math.cos(a);
+
+    const y =
+      centerY + r*Math.sin(a);
+
+    drawCar(
+      x,
+      y,
+      a + Math.PI/2,
+      scale,
+      i === steps
+    );
+
+  }
+
+}
+
+
+// ==============================
+// DRAW CAR
+// ==============================
+
+function drawCar(
+  x,
+  y,
+  rotation,
+  scale,
+  finalCar
+){
+
+  ctx.save();
+
+  ctx.translate(x,y);
+  ctx.rotate(rotation);
+
+
+  const length =
+    CAR_LENGTH*scale;
+
+  const width =
+    CAR_WIDTH*scale;
+
+
+  // shadow
+
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+
+  ctx.fillRect(
+    -length/2+5,
+    -width/2+5,
+    length,
+    width
+  );
+
+
+  // car body
+
+  ctx.fillStyle =
+    finalCar ? "#2563eb" : "#60a5fa";
+
+  ctx.strokeStyle = "#0f172a";
+  ctx.lineWidth = 2;
+
+  roundRect(
+    -length/2,
+    -width/2,
+    length,
+    width,
+    12
+  );
+
+  ctx.fill();
+  ctx.stroke();
+
+
+  // windows
+
+  ctx.fillStyle = "#dbeafe";
+
+  ctx.fillRect(
+    -length*.20,
+    -width*.35,
+    length*.40,
+    width*.70
+  );
+
+
+  // front windshield
+
+  ctx.fillStyle = "#bfdbfe";
+
+  ctx.fillRect(
+    length*.10,
+    -width*.35,
+    length*.25,
+    width*.70
+  );
+
+
+  // wheels
+
+  ctx.fillStyle = "#111";
+
+  const wheelL = length*.27;
+  const wheelW = width*.18;
+
+  ctx.fillRect(
+    -wheelL,
+    -width/2-wheelW/2,
+    length*.14,
+    wheelW
+  );
+
+  ctx.fillRect(
+    wheelL*.55,
+    -width/2-wheelW/2,
+    length*.14,
+    wheelW
+  );
+
+  ctx.fillRect(
+    -wheelL,
+    width/2-wheelW/2,
+    length*.14,
+    wheelW
+  );
+
+  ctx.fillRect(
+    wheelL*.55,
+    width/2-wheelW/2,
+    length*.14,
+    wheelW
+  );
+
+
+  // front indicator
+
+  ctx.fillStyle = "#fbbf24";
+
+  ctx.fillRect(
+    length/2-10,
+    -width*.32,
+    8,
+    10
+  );
+
+  ctx.fillRect(
+    length/2-10,
+    width*.20,
+    8,
+    10
+  );
+
+
+  ctx.restore();
+
+}
+
+
+// ==============================
+// ROUNDED RECT
+// ==============================
+
+function roundRect(
+  x,y,w,h,r
+){
+
+  ctx.beginPath();
+
+  ctx.moveTo(x+r,y);
+
+  ctx.lineTo(x+w-r,y);
+
+  ctx.quadraticCurveTo(
+    x+w,y,
+    x+w,y+r
+  );
+
+  ctx.lineTo(
+    x+w,y+h-r
+  );
+
+  ctx.quadraticCurveTo(
+    x+w,y+h,
+    x+w-r,y+h
+  );
+
+  ctx.lineTo(
+    x+r,y+h
+  );
+
+  ctx.quadraticCurveTo(
+    x,y+h,
+    x,y+h-r
+  );
+
+  ctx.lineTo(
+    x,y+r
+  );
+
+  ctx.quadraticCurveTo(
+    x,y,
+    x+r,y
+  );
+
+  ctx.closePath();
+
+}
+
+
+// ==============================
+// EVENTS
+// ==============================
+
+[
+  gateInput,
+  roadInput,
+  drivewayInput,
+  radiusInput,
+  angleInput
+].forEach(el => {
+
+  el.addEventListener(
+    "input",
+    draw
+  );
+
+});
+
+
+draw();
+
+</script>
+
+</body>
+</html>
