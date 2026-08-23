@@ -4,135 +4,107 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>टाटा पंच गेट सिमुलेटर</title>
+<title>Tata Punch AR Gate Simulator</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  :root { --a:#ff6b00; --a2:#00d4aa; --d:#ff3333; --w:#ffaa00; --t:#e8e8e8; --t2:#777; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:system-ui,sans-serif; color:var(--t); touch-action:none; user-select:none; }
-
-  /* Video */
-  #cam { position:fixed; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:1; background:#000; display:none; }
-
-  /* Canvas */
-  #cv { position:fixed; top:0; left:0; width:100%; height:100%; z-index:2; pointer-events:none; }
-  #cv.on { pointer-events:auto; }
-
-  /* Top bar */
-  #top { position:fixed; top:0; left:0; right:0; z-index:10; padding:8px 12px; background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent); display:none; align-items:center; justify-content:space-between; pointer-events:none; }
-  #top > * { pointer-events:auto; }
-  #top h1 { font-size:13px; color:var(--a); text-shadow:0 1px 4px rgba(0,0,0,.8); }
-  .tb { background:rgba(255,255,255,.1); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.15); color:#fff; padding:6px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:none; }
-  .tb:active { background:rgba(255,255,255,.2); transform:scale(.95); }
-
-  /* Info pill */
-  #pill { position:fixed; top:44px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(0,0,0,.75); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:6px 16px; display:none; gap:14px; align-items:center; font-size:11px; }
-  #pill.show { display:flex; }
-  .pi { text-align:center; }
-  .pi .n { font-size:13px; font-weight:700; color:var(--a); }
-  .pi .l { font-size:9px; color:var(--t2); text-transform:uppercase; }
-  .pi .n.ok { color:var(--a2); }
-  .pi .n.warn { color:var(--w); }
-  .pi .n.danger { color:var(--d); }
-
-  /* Toast */
-  #toast { position:fixed; top:90px; left:50%; transform:translateX(-50%); z-index:15; padding:8px 18px; border-radius:20px; font-size:12px; font-weight:700; display:none; text-align:center; backdrop-filter:blur(10px); }
-  #toast.show { display:block; }
-  #toast.ok { background:rgba(0,212,170,.25); color:var(--a2); border:1px solid var(--a2); }
-  #toast.warn { background:rgba(255,170,0,.25); color:var(--w); border:1px solid var(--w); }
-  #toast.danger { background:rgba(255,51,51,.25); color:var(--d); border:1px solid var(--d); }
-
-  /* FABs */
-  .fab { position:fixed; z-index:10; width:52px; height:52px; border-radius:50%; border:none; color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,.4); }
-  .fab:active { transform:scale(.9); }
-  #f1 { bottom:20px; right:20px; background:var(--a); }
-  #f2 { bottom:20px; left:20px; background:var(--a2); font-size:18px; }
-  #f3 { bottom:84px; right:20px; background:#444; font-size:18px; width:46px; height:46px; }
-  #f3.on { background:var(--a); }
-
-  /* Bottom Sheet */
-  #sheet { position:fixed; bottom:0; left:0; right:0; z-index:20; background:#0f0f18; border-radius:24px 24px 0 0; border:1px solid rgba(255,255,255,.08); transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); max-height:75vh; display:flex; flex-direction:column; }
-  #sheet.open { transform:translateY(0); }
-  #sh { width:40px; height:4px; background:rgba(255,255,255,.2); border-radius:2px; margin:10px auto; cursor:pointer; }
-  #sc { overflow-y:auto; padding:0 16px 24px; }
-  .st { font-size:16px; font-weight:700; color:var(--a); margin-bottom:14px; text-align:center; }
-  .cg { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
-  .cb { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--t); border-radius:12px; padding:10px 4px; font-size:11px; font-weight:600; cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; min-height:64px; justify-content:center; border:none; }
-  .cb:active { background:rgba(255,255,255,.1); transform:scale(.96); }
-  .cb.p { background:var(--a); color:#fff; }
-  .cb.x { background:rgba(255,51,51,.15); color:var(--d); }
-  .cb.g { background:rgba(0,212,170,.15); color:var(--a2); }
-  .cb i { font-size:18px; }
-  .sl { background:rgba(255,255,255,.03); border-radius:12px; padding:12px; margin-bottom:10px; }
-  .sl label { font-size:11px; color:var(--t2); display:flex; justify-content:space-between; margin-bottom:6px; }
-  .sl input { width:100%; accent-color:var(--a); }
-  .sl .v { color:var(--a); font-weight:700; }
-  .sec { font-size:12px; color:var(--t2); margin:14px 0 8px; text-transform:uppercase; letter-spacing:1px; }
-
-  /* Modals */
-  .md { position:fixed; inset:0; z-index:30; background:rgba(0,0,0,.85); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:16px; }
-  .md.show { display:flex; }
-  .mbx { background:#0f0f18; border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:20px; width:100%; max-width:360px; }
-  .mbx h2 { font-size:18px; color:var(--a); margin-bottom:8px; text-align:center; }
-  .mbx p { font-size:13px; color:var(--t2); text-align:center; margin-bottom:14px; }
-  .ir { display:flex; gap:8px; align-items:center; justify-content:center; margin:10px 0; }
-  .ir input { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--t); padding:10px; border-radius:10px; width:80px; font-size:15px; text-align:center; }
-  .ts { display:flex; gap:4px; background:rgba(255,255,255,.04); padding:4px; border-radius:10px; margin:10px 0; }
-  .ta { flex:1; text-align:center; padding:8px; font-size:12px; border-radius:8px; cursor:pointer; color:var(--t2); border:none; background:transparent; }
-  .ta.active { background:rgba(255,107,0,.2); color:var(--a); font-weight:600; }
-
-  /* Debug */
-  #db { position:fixed; top:60px; right:8px; z-index:10; background:rgba(10,10,15,.92); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:10px; font-size:10px; max-width:200px; display:none; line-height:1.7; color:var(--t2); }
-  #db.show { display:block; }
-  #db .ok { color:var(--a2); }
-  #db .err { color:var(--d); }
-
-  /* Start Screen */
-  #ss { position:fixed; inset:0; z-index:100; background:#050508; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; }
-  #ss h1 { font-size:26px; color:var(--a); margin-bottom:6px; }
-  #ss p { font-size:13px; color:var(--t2); margin-bottom:28px; line-height:1.6; }
-  .bb { background:var(--a); color:#fff; border:none; padding:16px 32px; border-radius:16px; font-size:15px; font-weight:700; margin-bottom:10px; cursor:pointer; width:100%; max-width:300px; box-shadow:0 4px 20px rgba(255,107,0,.3); }
-  .bb.s { background:rgba(255,255,255,.08); color:var(--t); box-shadow:none; }
-  .bb:active { transform:scale(.97); }
-
-  /* Fallback */
-  #fb { display:none; position:fixed; inset:0; z-index:5; background:#000; align-items:center; justify-content:center; flex-direction:column; }
-  #fb.show { display:flex; }
-  #fb img, #fb video { max-width:100%; max-height:70vh; object-fit:contain; }
-
-  /* Instruction */
-  #ins { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:25; background:rgba(0,0,0,.8); color:#fff; padding:14px 24px; border-radius:16px; font-size:15px; font-weight:600; display:none; text-align:center; border:1px solid rgba(255,255,255,.15); pointer-events:none; }
-  #ins.show { display:block; }
-
-  .ds { font-size:10px; color:var(--t2); margin-top:8px; line-height:1.5; padding:0 8px; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--a:#ff6b00;--a2:#00d4aa;--d:#ff3333;--w:#ffaa00;--t:#e8e8e8;--t2:#777}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:system-ui,sans-serif;color:var(--t);touch-action:none;user-select:none}
+#cam{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;display:none;background:#000}
+#c2d{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none}
+#c2d.on{pointer-events:auto}
+#xr-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;display:none}
+#top{position:fixed;top:0;left:0;right:0;z-index:10;padding:8px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.7),transparent);display:none;align-items:center;justify-content:space-between;pointer-events:none}
+#top>*{pointer-events:auto}
+#top h1{font-size:13px;color:var(--a);text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.tb{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.tb:active{background:rgba(255,255,255,.2);transform:scale(.95)}
+#pill{position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:6px 16px;display:none;gap:14px;align-items:center;font-size:11px}
+#pill.s{display:flex}
+.pi{text-align:center}
+.pi .n{font-size:13px;font-weight:700;color:var(--a)}
+.pi .l{font-size:9px;color:var(--t2);text-transform:uppercase}
+.pi .n.o{color:var(--a2)}
+.pi .n.w{color:var(--w)}
+.pi .n.x{color:var(--d)}
+#toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);z-index:15;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;display:none;text-align:center;backdrop-filter:blur(10px)}
+#toast.s{display:block}
+#toast.o{background:rgba(0,212,170,.25);color:var(--a2);border:1px solid var(--a2)}
+#toast.w{background:rgba(255,170,0,.25);color:var(--w);border:1px solid var(--w)}
+#toast.x{background:rgba(255,51,51,.25);color:var(--d);border:1px solid var(--d)}
+.fab{position:fixed;z-index:10;width:52px;height:52px;border-radius:50%;border:none;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+.fab:active{transform:scale(.9)}
+#f1{bottom:20px;right:20px;background:var(--a)}
+#f2{bottom:20px;left:20px;background:var(--a2);font-size:18px}
+#f3{bottom:84px;right:20px;background:#444;font-size:18px;width:46px;height:46px}
+#f3.on{background:var(--a)}
+#sheet{position:fixed;bottom:0;left:0;right:0;z-index:20;background:#0f0f18;border-radius:24px 24px 0 0;border:1px solid rgba(255,255,255,.08);transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:75vh;display:flex;flex-direction:column}
+#sheet.o{transform:translateY(0)}
+#sh{width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:10px auto;cursor:pointer}
+#sc{overflow-y:auto;padding:0 16px 24px}
+.st{font-size:16px;font-weight:700;color:var(--a);margin-bottom:14px;text-align:center}
+.cg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.cb{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--t);border-radius:12px;padding:10px 4px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;justify-content:center;border:none}
+.cb:active{background:rgba(255,255,255,.1);transform:scale(.96)}
+.cb.p{background:var(--a);color:#fff}
+.cb.x{background:rgba(255,51,51,.15);color:var(--d)}
+.cb.g{background:rgba(0,212,170,.15);color:var(--a2)}
+.cb i{font-size:18px}
+.sl{background:rgba(255,255,255,.03);border-radius:12px;padding:12px;margin-bottom:10px}
+.sl label{font-size:11px;color:var(--t2);display:flex;justify-content:space-between;margin-bottom:6px}
+.sl input{width:100%;accent-color:var(--a)}
+.sl .v{color:var(--a);font-weight:700}
+.sc{font-size:12px;color:var(--t2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.md{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:16px}
+.md.s{display:flex}
+.mbx{background:#0f0f18;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:20px;width:100%;max-width:380px}
+.mbx h2{font-size:18px;color:var(--a);margin-bottom:8px;text-align:center}
+.mbx p{font-size:13px;color:var(--t2);text-align:center;margin-bottom:14px}
+.ir{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px 0;flex-wrap:wrap}
+.ir input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--t);padding:10px;border-radius:10px;width:75px;font-size:15px;text-align:center}
+.ts{display:flex;gap:4px;background:rgba(255,255,255,.04);padding:4px;border-radius:10px;margin:10px 0}
+.ta{flex:1;text-align:center;padding:8px;font-size:12px;border-radius:8px;cursor:pointer;color:var(--t2);border:none;background:transparent}
+.ta.a{background:rgba(255,107,0,.2);color:var(--a);font-weight:600}
+#db{position:fixed;top:60px;right:8px;z-index:10;background:rgba(10,10,15,.92);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;font-size:10px;max-width:210px;display:none;line-height:1.7;color:var(--t2)}
+#db.s{display:block}
+#db .o{color:var(--a2)}
+#db .x{color:var(--d)}
+#ss{position:fixed;inset:0;z-index:100;background:#050508;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#ss h1{font-size:24px;color:var(--a);margin-bottom:6px}
+#ss p{font-size:13px;color:var(--t2);margin-bottom:24px;line-height:1.6}
+.bb{background:var(--a);color:#fff;border:none;padding:16px 32px;border-radius:16px;font-size:15px;font-weight:700;margin-bottom:10px;cursor:pointer;width:100%;max-width:320px;box-shadow:0 4px 20px rgba(255,107,0,.3)}
+.bb.s{background:rgba(255,255,255,.08);color:var(--t);box-shadow:none}
+.bb:active{transform:scale(.97)}
+#fb{display:none;position:fixed;inset:0;z-index:5;background:#000;align-items:center;justify-content:center;flex-direction:column}
+#fb.s{display:flex}
+#fb img,#fb video{max-width:100%;max-height:65vh;object-fit:contain}
+#ins{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;background:rgba(0,0,0,.85);color:#fff;padding:14px 24px;border-radius:16px;font-size:15px;font-weight:600;display:none;text-align:center;border:1px solid rgba(255,255,255,.15);pointer-events:none}
+#ins.s{display:block}
+.ds{font-size:10px;color:var(--t2);margin-top:8px;line-height:1.5;padding:0 8px}
 </style>
-<base target="_blank">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body>
 
-<!-- Camera -->
 <video id="cam" autoplay playsinline muted></video>
 <input type="file" id="fi" accept="image/*,video/*" style="display:none" onchange="app.handleFile(event)">
+<div id="fb"><img id="fbi" style="display:none"><video id="fbv" controls style="display:none"></video><button class="bb s" style="margin-top:20px" onclick="document.getElementById('fi').click()">दूसरी फोटो</button></div>
+<canvas id="c2d"></canvas>
 
-<!-- Photo fallback -->
-<div id="fb">
-  <img id="fbi" style="display:none">
-  <video id="fbv" controls style="display:none"></video>
-  <button class="bb s" style="margin-top:20px" onclick="document.getElementById('fi').click()">दूसरी फोटो</button>
-</div>
-
-<!-- Canvas -->
-<canvas id="cv"></canvas>
-
-<!-- Top -->
 <div id="top">
-  <h1>🚙 टाटा पंच सिमुलेटर</h1>
+  <h1>🚙 टाटा पंच AR सिमुलेटर</h1>
   <div style="display:flex;gap:6px">
     <button class="tb" onclick="app.toggleDebug()">🔧</button>
     <button class="tb" onclick="app.switchCamera()">🔄</button>
   </div>
 </div>
 
-<!-- Info Pill -->
 <div id="pill">
   <div class="pi"><div class="n" id="pg">—</div><div class="l">गेट</div></div>
   <div class="pi"><div class="n" id="pb">—</div><div class="l">बॉडी</div></div>
@@ -140,39 +112,33 @@
   <div class="pi"><div class="n" id="pn">—</div><div class="l">मिन गैप</div></div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 <div id="ins"></div>
 
-<!-- FABs -->
 <button id="f2" class="fab" style="display:none" onclick="app.openCalib()">📏</button>
 <button id="f3" class="fab" style="display:none" onclick="app.togglePath()">🔮</button>
 <button id="f1" class="fab" style="display:none" onclick="app.openSheet()">⚙️</button>
 
-<!-- Bottom Sheet -->
 <div id="sheet">
   <div id="sh" onclick="app.closeSheet()"></div>
   <div id="sc">
     <div class="st">कंट्रोल्स</div>
-    <div class="sec">स्टीयरिंग</div>
-    <div class="sl">
-      <label>स्टीयरिंग कोण <span class="v" id="vs">0°</span></label>
-      <input type="range" id="is" min="-45" max="45" value="0" step="1" oninput="app.setSteering(this.value)">
-    </div>
+    <div class="sc">स्टीयरिंग</div>
+    <div class="sl"><label>स्टीयरिंग कोण <span class="v" id="vs">0°</span></label><input type="range" id="is" min="-45" max="45" value="0" step="1" oninput="app.setSteering(this.value)"></div>
     <div class="cg">
       <button class="cb p" ontouchstart="app.setSpeed(1)" ontouchend="app.setSpeed(0)" onmousedown="app.setSpeed(1)" onmouseup="app.setSpeed(0)"><i>▶</i>आगे</button>
       <button class="cb p" ontouchstart="app.setSpeed(-1)" ontouchend="app.setSpeed(0)" onmousedown="app.setSpeed(-1)" onmouseup="app.setSpeed(0)"><i>◀</i>पीछे</button>
       <button class="cb" onclick="app.resetCar()"><i>↺</i>रीसेट</button>
-      <button class="cb x" onclick="app.stopCamera();location.reload()"><i>✕</i>बंद</button>
+      <button class="cb x" onclick="app.stopAll();location.reload()"><i>✕</i>बंद</button>
     </div>
-    <div class="sec">सिमुलेशन</div>
+    <div class="sc">सिमुलेशन</div>
     <div class="cg">
       <button class="cb g" onclick="app.togglePath()"><i>🔮</i>पाथ टॉगल</button>
       <button class="cb" onclick="app.openCalib()"><i>📏</i>कैलिब्रेट</button>
       <button class="cb" onclick="app.openRamp()"><i>🚧</i>रैंप</button>
       <button class="cb" onclick="app.switchCamera()"><i>🔄</i>कैमरा</button>
     </div>
-    <div class="sec">जानकारी</div>
+    <div class="sc">जानकारी</div>
     <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:12px;font-size:12px;line-height:1.8">
       <div style="display:flex;justify-content:space-between"><span>गेट:</span><b id="sg">2.13 m</b></div>
       <div style="display:flex;justify-content:space-between"><span>बॉडी:</span><b>1.742 m</b></div>
@@ -180,35 +146,31 @@
       <div style="display:flex;justify-content:space-between"><span>व्हीलबेस:</span><b>2.445 m</b></div>
       <div style="display:flex;justify-content:space-between"><span>GC:</span><b>193 mm</b></div>
     </div>
-    <div class="ds">⚠️ यह अनुमानित सिमुलेशन है — असली गाड़ी में धीरे जांचें।</div>
+    <div class="ds">⚠️ अनुमानित सिमुलेशन — असली गाड़ी में धीरे जांचें।</div>
   </div>
 </div>
 
-<!-- Calibration Modal -->
 <div id="cm" class="md">
   <div class="mbx">
-    <h2>🚪 गेट कैलिब्रेशन</h2>
-    <p id="ch">बाएं पिलर पर टैप करें</p>
+    <h2>🚪 ग्राउंड कैलिब्रेशन</h2>
+    <p id="ch">बाएं गेट पिलर (जमीन) पर टैप करें</p>
     <div class="ir">
-      <input id="gf" value="7" step="0.5" onchange="app.updateGate()">
-      <span style="color:var(--t2);font-size:13px">फीट =</span>
-      <input id="gm" value="2.134" step="0.01" onchange="app.updateGateM()">
-      <span style="color:var(--t2);font-size:13px">मीटर</span>
+      <input id="gw" value="2.134" step="0.01" onchange="app.updateGate()"><span style="color:var(--t2);font-size:13px">मीटर चौड़ाई</span>
+      <input id="gd" value="5" step="0.5" onchange="app.updateDepth()"><span style="color:var(--t2);font-size:13px">मीटर गहराई</span>
     </div>
     <div class="ts">
       <button class="ta active" onclick="app.setCalibMode(2)">2 बिंदु</button>
-      <button class="ta" onclick="app.setCalibMode(4)">4 बिंदु</button>
+      <button class="ta" onclick="app.setCalibMode(4)">4 बिंदु (जमीन)</button>
     </div>
     <div class="cg" style="grid-template-columns:repeat(3,1fr)">
       <button class="cb g" onclick="app.finishCalib()">✓ तैयार</button>
       <button class="cb" onclick="app.resetCalib()">↺ रीसेट</button>
       <button class="cb x" onclick="app.closeCalib()">✕ बंद</button>
     </div>
-    <div class="ds">2-बिंदु = सरल। 4-बिंदु = पर्सपेक्टिव सही।</div>
+    <div class="ds">4-बिंदु = जमीन के 4 कोने (गेट से अंदर)। सही पर्सपेक्टिव मिलेगा।</div>
   </div>
 </div>
 
-<!-- Ramp Modal -->
 <div id="rm" class="md">
   <div class="mbx">
     <h2>🚧 रैंप मोड</h2>
@@ -220,171 +182,102 @@
   </div>
 </div>
 
-<!-- Debug -->
 <div id="db">
   <div style="font-weight:700;margin-bottom:4px">🔧 डिबग</div>
+  <div>मोड: <span id="dm">—</span></div>
   <div>कैमरा: <span id="dp">—</span></div>
   <div>HTTPS: <span id="ds">—</span></div>
   <div>स्ट्रीम: <span id="dt">—</span></div>
-  <div>फेसिंग: <span id="df">—</span></div>
-  <div>वीडियो: <span id="dz">—</span></div>
-  <div>पीपीएम: <span id="dp2">—</span></div>
+  <div>XR: <span id="dx">—</span></div>
   <div>कैलिब: <span id="dc">—</span></div>
   <div>स्लोप: <span id="dl">—</span></div>
 </div>
 
-<!-- Start Screen -->
 <div id="ss">
   <h1>🚗 टाटा पंच गेट सिमुलेटर</h1>
-  <p>अपने फोन के कैमरे से देखें<br>कि गाड़ी घुसेगी या नहीं</p>
-  <button class="bb" onclick="app.startCamera()">📷 कैमरा शुरू करें</button>
+  <p>वर्ल्ड-कोऑर्डिनेट AR सिमुलेशन<br>गेट, ढलान और टर्निंग चेक करें</p>
+  <button class="bb" id="btn-ar" style="display:none" onclick="app.startAR()">🥽 AR मोड (WebXR)</button>
+  <button class="bb s" onclick="app.startCamera()">📷 कैमरा ओवरले मोड</button>
   <button class="bb s" onclick="app.usePhoto()">🖼️ फोटो/वीडियो</button>
-  <div class="ds">⚠️ HTTPS/localhost ज़रूरी। यह अनुमानित सिमुलेशन है।</div>
+  <div class="ds">⚠️ AR मोड के लिए WebXR सपोर्ट ज़रूरी। कैमरा मोड के लिए HTTPS ज़रूरी।</div>
 </div>
 
-<script>
+<script type="module">
+import * as THREE from 'three';
+
 // ==================== CAR SPECS ====================
 const CAR = {
-  length: 3.876, width: 1.742, mirrorWidth: 1.945,
-  wheelbase: 2.445, frontOverhang: 0.823, rearOverhang: 0.608,
-  groundClearance: 0.193, trackWidth: 1.5,
-  approachAngle: 20, departureAngle: 35
+  length:3.876, width:1.742, mirrorWidth:1.945,
+  wheelbase:2.445, frontOverhang:0.823, rearOverhang:0.608,
+  groundClearance:0.193, trackWidth:1.5, height:1.6,
+  approachAngle:20, departureAngle:35
 };
 
-// ==================== COLORS ====================
-const C = {
-  safe: '#00d4aa', warn: '#ffaa00', danger: '#ff3333',
-  body: 'rgba(255,107,0,0.28)', stroke: '#ff6b00',
-  glass: 'rgba(100,180,255,0.15)', mirror: 'rgba(255,200,0,0.35)',
-  wheel: '#2a2a2a',
-  pathSafe: 'rgba(0,212,170,0.5)', pathWarn: 'rgba(255,170,0,0.55)', pathDanger: 'rgba(255,51,51,0.55)',
-  gate: '#00d4aa', gatePost: '#ff3333'
-};
-
-// ==================== MATH ====================
-function solveHomography(pts) {
-  const src = pts;
-  const dst = [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}];
-  const A = [];
-  for (let i = 0; i < 4; i++) {
-    const sx = src[i].x, sy = src[i].y, dx = dst[i].x, dy = dst[i].y;
-    A.push([sx, sy, 1, 0, 0, 0, -dx*sx, -dx*sy, -dx]);
-    A.push([0, 0, 0, sx, sy, 1, -dy*sx, -dy*sy, -dy]);
+// ==================== WORLD BICYCLE MODEL ====================
+class WorldVehicle {
+  constructor(){
+    this.x=0; this.y=0; this.heading=-Math.PI/2;
+    this.steering=0; this.speed=0; this.path=[];
   }
-  for (let col = 0; col < 8; col++) {
-    let pivot = col;
-    for (let row = col; row < 8; row++) {
-      if (Math.abs(A[row][col]) > Math.abs(A[pivot][col])) pivot = row;
+  reset(){
+    this.x=0; this.y=0; this.heading=-Math.PI/2;
+    this.steering=0; this.speed=0; this.path=[];
+  }
+  update(dt){
+    if(Math.abs(this.speed)<0.01)return;
+    const sr=this.steering*Math.PI/180, L=CAR.wheelbase, v=this.speed*2.5;
+    if(Math.abs(sr)<0.001){
+      this.x+=v*dt*Math.cos(this.heading);
+      this.y+=v*dt*Math.sin(this.heading);
+    }else{
+      const R=L/Math.tan(sr);
+      const ix=this.x-R*Math.sin(this.heading), iy=this.y+R*Math.cos(this.heading);
+      this.heading+=(v/R)*dt;
+      this.x=ix+R*Math.sin(this.heading);
+      this.y=iy-R*Math.cos(this.heading);
     }
-    if (Math.abs(A[pivot][col]) < 1e-12) continue;
-    [A[col], A[pivot]] = [A[pivot], A[col]];
-    const p = A[col][col];
-    for (let j = col; j < 9; j++) A[col][j] /= p;
-    for (let row = 0; row < 8; row++) {
-      if (row === col) continue;
-      const f = A[row][col];
-      for (let j = col; j < 9; j++) A[row][j] -= f * A[col][j];
-    }
+    while(this.heading>Math.PI)this.heading-=2*Math.PI;
+    while(this.heading<-Math.PI)this.heading+=2*Math.PI;
+    this.path.push({x:this.x,y:this.y,h:this.heading});
+    if(this.path.length>400)this.path.shift();
   }
-  const h = [];
-  for (let i = 0; i < 8; i++) h.push(-A[i][8]);
-  h.push(1);
-  const norm = Math.sqrt(h[0]*h[0] + h[3]*h[3] + h[6]*h[6]);
-  for (let i = 0; i < 9; i++) h[i] /= norm;
-  return h;
-}
-
-function applyH(H, pt) {
-  const x = H[0]*pt.x + H[1]*pt.y + H[2];
-  const y = H[3]*pt.x + H[4]*pt.y + H[5];
-  const w = H[6]*pt.x + H[7]*pt.y + H[8];
-  return w === 0 ? {x:0, y:0} : {x:x/w, y:y/w};
-}
-
-function invertH(H) {
-  const a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7],i=H[8];
-  const A=e*i-f*h, B=f*g-d*i, C=d*h-e*g;
-  const D=c*h-b*i, E=a*i-c*g, F=b*g-a*h;
-  const G=b*f-c*e, H2=c*d-a*f, I=a*e-b*d;
-  const det = a*A + b*B + c*C;
-  if (Math.abs(det) < 1e-10) return null;
-  return [A/det, D/det, G/det, B/det, E/det, H2/det, C/det, F/det, I/det];
-}
-
-// ==================== VEHICLE MODEL ====================
-class Vehicle {
-  constructor() { this.reset(); }
-  
-  reset() {
-    this.x = 0; this.y = 0; this.heading = -Math.PI/2;
-    this.steering = 0; this.speed = 0; this.path = [];
-  }
-  
-  corners() {
-    const c = Math.cos(this.heading), s = Math.sin(this.heading);
-    const Lf = CAR.frontOverhang + CAR.wheelbase;
-    const Lr = CAR.rearOverhang;
-    const W2 = CAR.width/2, M2 = CAR.mirrorWidth/2;
-    const rot = pts => pts.map(p => ({x: this.x + p.x*c - p.y*s, y: this.y + p.x*s + p.y*c}));
-    return {
-      body: rot([{x:Lf,y:-W2},{x:Lf,y:W2},{x:-Lr,y:W2},{x:-Lr,y:-W2}]),
-      mirrors: rot([{x:0.9,y:-M2},{x:0.9,y:M2}]),
-      wheels: rot([{x:CAR.wheelbase,y:-CAR.trackWidth/2},{x:CAR.wheelbase,y:CAR.trackWidth/2},{x:0,y:-CAR.trackWidth/2},{x:0,y:CAR.trackWidth/2}])
-    };
-  }
-  
-  update(dt) {
-    if (Math.abs(this.speed) < 0.01) return;
-    const sr = this.steering * Math.PI/180, L = CAR.wheelbase, v = this.speed * 2.5;
-    if (Math.abs(sr) < 0.001) {
-      this.x += v*dt*Math.cos(this.heading);
-      this.y += v*dt*Math.sin(this.heading);
-    } else {
-      const R = L / Math.tan(sr);
-      const ix = this.x - R*Math.sin(this.heading);
-      const iy = this.y + R*Math.cos(this.heading);
-      this.heading += (v/R)*dt;
-      this.x = ix + R*Math.sin(this.heading);
-      this.y = iy - R*Math.cos(this.heading);
-    }
-    while (this.heading > Math.PI) this.heading -= 2*Math.PI;
-    while (this.heading < -Math.PI) this.heading += 2*Math.PI;
-    this.path.push({x:this.x, y:this.y, h:this.heading});
-    if (this.path.length > 300) this.path.shift();
-  }
-  
-  predict(steps, dt) {
-    dt = dt || 0.05;
-    const arr = [];
-    let px=this.x, py=this.y, ph=this.heading;
-    const sr = this.steering * Math.PI/180, L = CAR.wheelbase;
-    const v = Math.sign(this.speed || 1) * 2.5;
-    for (let i = 0; i < steps; i++) {
-      if (Math.abs(sr) < 0.001) {
-        px += v*dt*Math.cos(ph); py += v*dt*Math.sin(ph);
-      } else {
-        const R = L/Math.tan(sr);
-        const ix = px - R*Math.sin(ph), iy = py + R*Math.cos(ph);
-        ph += (v/R)*dt; px = ix + R*Math.sin(ph); py = iy - R*Math.cos(ph);
+  predict(steps,dt){
+    dt=dt||0.05; const arr=[];
+    let px=this.x,py=this.y,ph=this.heading;
+    const sr=this.steering*Math.PI/180, L=CAR.wheelbase;
+    const v=Math.sign(this.speed||1)*2.5;
+    for(let i=0;i<steps;i++){
+      if(Math.abs(sr)<0.001){px+=v*dt*Math.cos(ph);py+=v*dt*Math.sin(ph);}
+      else{
+        const R=L/Math.tan(sr);
+        const ix=px-R*Math.sin(ph),iy=py+R*Math.cos(ph);
+        ph+=(v/R)*dt;px=ix+R*Math.sin(ph);py=iy-R*Math.cos(ph);
       }
-      arr.push({x:px, y:py, h:ph});
+      arr.push({x:px,y:py,h:ph});
     }
     return arr;
   }
-  
-  envelope(pred) {
-    const Lf = CAR.frontOverhang + CAR.wheelbase;
-    const Lr = CAR.rearOverhang;
-    const W2 = CAR.width/2, M2 = CAR.mirrorWidth/2;
-    return pred.map(st => {
-      const c = Math.cos(st.h), s = Math.sin(st.h);
-      return [
-        {x:st.x+Lf*c-W2*s, y:st.y+Lf*s+W2*c},
-        {x:st.x+Lf*c+W2*s, y:st.y+Lf*s-W2*c},
-        {x:st.x-Lr*c+W2*s, y:st.y-Lr*s-W2*c},
-        {x:st.x-Lr*c-W2*s, y:st.y-Lr*s+W2*c},
-        {x:st.x+0.9*c-M2*s, y:st.y+0.9*s+M2*c},
-        {x:st.x+0.9*c+M2*s, y:st.y+0.9*s-M2*c}
+  getCorners(){
+    const c=Math.cos(this.heading), s=Math.sin(this.heading);
+    const Lf=CAR.frontOverhang+CAR.wheelbase, Lr=CAR.rearOverhang;
+    const W2=CAR.width/2, M2=CAR.mirrorWidth/2;
+    const rot=pts=>pts.map(p=>({x:this.x+p.x*c-p.y*s, y:this.y+p.x*s+p.y*c}));
+    return{
+      body:rot([{x:Lf,y:-W2},{x:Lf,y:W2},{x:-Lr,y:W2},{x:-Lr,y:-W2}]),
+      mirrors:rot([{x:0.9,y:-M2},{x:0.9,y:M2}]),
+      wheels:rot([{x:CAR.wheelbase,y:-CAR.trackWidth/2},{x:CAR.wheelbase,y:CAR.trackWidth/2},{x:0,y:-CAR.trackWidth/2},{x:0,y:CAR.trackWidth/2}])
+    };
+  }
+  envelope(pred){
+    const Lf=CAR.frontOverhang+CAR.wheelbase, Lr=CAR.rearOverhang, W2=CAR.width/2, M2=CAR.mirrorWidth/2;
+    return pred.map(st=>{
+      const c=Math.cos(st.h), s=Math.sin(st.h);
+      return[
+        2*s,y:st.y+Lf*s-W2*c},
+        {x:st.x-Lr*c+W2*s,y:st.y-Lr*s-W2*c},
+        {x:st.x-Lr*c-W2*s,y:st.y-Lr*s+W2*c},
+        {x:st.x+0.9*c-M2*s,y:st.y+0.9*s+M2*c},
+        {x:st.x+0.9*c+M2*s,y:st.y+0.9*s-M2*c}
       ];
     });
   }
@@ -392,804 +285,919 @@ class Vehicle {
 
 // ==================== APP ====================
 class App {
-  constructor() {
-    this.video = document.getElementById('cam');
-    this.canvas = document.getElementById('cv');
-    this.ctx = this.canvas.getContext('2d');
-    this.car = new Vehicle();
+  constructor(){
+    this.video=document.getElementById('cam');
+    this.canvas2d=document.getElementById('c2d');
+    this.ctx=this.canvas2d.getContext('2d');
+    this.car=new WorldVehicle();
     
-    this.stream = null;
-    this.facing = 'environment';
-    this.calibPts = [];
-    this.calibMode = 2;
-    this.gateW = 2.134;
-    this.ppm = 130;
-    this.homography = null;
-    this.invH = null;
-    this.isCalibrated = false;
-    this.isCalibrating = false;
-    this.showPath = false;
-    this.rampOn = false;
-    this.ramp = {h:0.1, l:2, d:3, a:2.9};
+    this.mode=null;
+    this.stream=null;
+    this.facing='environment';
     
-    this.scr = {x:0, y:0, sc:1, r:-90};
-    this.drag = false;
-    this.rotating = false;
-    this.drag0 = {x:0, y:0, cx:0, cy:0};
-    this.lastDist = 0;
-    this.lastAngle = 0;
-    this.rot0 = 0;
-    this.simSpeed = 0;
-    this.lastT = 0;
-    this.frameCount = 0;
-    this.deviceSlope = null;
+    this.calibPts=[];
+    this.calibMode=2;
+    this.gateWidth=2.134;
+    this.gateDepth=5.0;
+    this.groundH=null;
+    this.invGroundH=null;
+    this.isCalibrated=false;
+    this.isCalibrating=false;
+    
+    this.worldOrigin={x:0,y:0};
+    this.ppm=130;
+    
+    this.showPath=false;
+    this.rampOn=false;
+    this.ramp={h:0.1,l:2,d:3,a:2.9};
+    
+    this.scr={x:0,y:0,r:-90};
+    this.drag=false;
+    this.drag0={x:0,y:0,cx:0,cy:0};
+    this.rot0=0;
+    this.lastAngle=0;
+    this.simSpeed=0;
+    
+    this.lastT=0;
+    this.frameCount=0;
+    this.deviceSlope=null;
+    
+    this.renderer=null;
+    this.scene=null;
+    this.camera=null;
+    this.carGroup=null;
+    this.xrSession=null;
+    this.xrRefSpace=null;
+    this.hitTestSource=null;
     
     this.init();
   }
   
-  init() {
+  init(){
     this.resize();
-    window.addEventListener('resize', () => this.resize());
-    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 300));
+    window.addEventListener('resize',()=>this.resize());
     
-    this.canvas.addEventListener('touchstart', e => this.onTouchStart(e), {passive:false});
-    this.canvas.addEventListener('touchmove', e => this.onTouchMove(e), {passive:false});
-    this.canvas.addEventListener('touchend', e => this.onTouchEnd(e));
-    this.canvas.addEventListener('mousedown', e => this.onMouseDown(e));
-    window.addEventListener('mousemove', e => this.onMouseMove(e));
-    window.addEventListener('mouseup', e => this.onMouseUp(e));
+    this.canvas2d.addEventListener('touchstart',e=>this.ts(e),{passive:false});
+    this.canvas2d.addEventListener('touchmove',e=>this.tm(e),{passive:false});
+    this.canvas2d.addEventListener('touchend',e=>this.te(e));
+    this.canvas2d.addEventListener('mousedown',e=>this.md(e));
+    window.addEventListener('mousemove',e=>this.mm(e));
+    window.addEventListener('mouseup',e=>this.mu(e));
     
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', e => {
-        if (e.beta !== null) {
-          this.deviceSlope = e.beta;
-          document.getElementById('dl').innerHTML = `<span class="ok">${e.beta.toFixed(1)}°</span>`;
+    if(window.DeviceOrientationEvent){
+      window.addEventListener('deviceorientation',e=>{
+        if(e.beta!==null){
+          this.deviceSlope=e.beta;
+          document.getElementById('dl').innerHTML=`<span class="o">${e.beta.toFixed(1)}°</span>`;
         }
       });
     }
     
-    document.getElementById('ds').innerHTML = window.isSecureContext ? '<span class="ok">हाँ</span>' : '<span class="err">नहीं</span>';
-    this.scr.x = innerWidth / 2;
-    this.scr.y = innerHeight * 0.65;
+    if(navigator.xr){
+      navigator.xr.isSessionSupported('immersive-ar').then(supported=>{
+        if(supported){
+          document.getElementById('btn-ar').style.display='block';
+          document.getElementById('dx').innerHTML='<span class="o">उपलब्ध</span>';
+        }else{
+          document.getElementById('dx').innerHTML='<span class="x">नहीं</span>';
+        }
+      });
+    }else{
+      document.getElementById('dx').innerHTML='<span class="x">नहीं</span>';
+    }
     
-    requestAnimationFrame(t => this.loop(t));
+    document.getElementById('ds').innerHTML=window.isSecureContext?'<span class="o">हाँ</span>':'<span class="x">नहीं</span>';
+    this.scr.x=innerWidth/2;
+    this.scr.y=innerHeight*0.65;
+    
+    requestAnimationFrame(t=>this.loop(t));
   }
   
-  resize() {
-    const dpr = devicePixelRatio || 1;
-    this.canvas.width = innerWidth * dpr;
-    this.canvas.height = innerHeight * dpr;
-    this.canvas.style.width = innerWidth + 'px';
-    this.canvas.style.height = innerHeight + 'px';
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  resize(){
+    const dpr=devicePixelRatio||1;
+    this.canvas2d.width=innerWidth*dpr;
+    this.canvas2d.height=innerHeight*dpr;
+    this.canvas2d.style.width=innerWidth+'px';
+    this.canvas2d.style.height=innerHeight+'px';
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(this.renderer){
+      this.renderer.setSize(innerWidth,innerHeight);
+      if(this.camera){
+        this.camera.aspect=innerWidth/innerHeight;
+        this.camera.updateProjectionMatrix();
+      }
+    }
+  }
+  
+  // ==================== AR MODE ====================
+  async startAR(){
+    if(!navigator.xr)return;
+    try{
+      const session=await navigator.xr.requestSession('immersive-ar',{
+        requiredFeatures:['hit-test'],
+        optionalFeatures:['dom-overlay'],
+        domOverlay:{root:document.body}
+      });
+      
+      this.mode='ar';
+      this.xrSession=session;
+      document.getElementById('ss').style.display='none';
+      document.getElementById('top').style.display='flex';
+      document.getElementById('pill').classList.add('s');
+      document.getElementById('f1').style.display='flex';
+      document.getElementById('f2').style.display='flex';
+      document.getElementById('f3').style.display='flex';
+      document.getElementById('dm').textContent='WebXR AR';
+      document.getElementById('dp').innerHTML='<span class="o">AR</span>';
+      document.getElementById('dt').innerHTML='<span class="o">चालू</span>';
+      
+      this.setupThree(session);
+      
+      session.addEventListener('end',()=>{
+        this.mode='camera';
+        this.cleanupXR();
+      });
+      
+      session.requestReferenceSpace('local-floor').then(refSpace=>{
+        this.xrRefSpace=refSpace;
+        session.requestHitTestSource({space:refSpace}).then(hts=>{
+          this.hitTestSource=hts;
+        });
+      });
+      
+      session.requestAnimationFrame((t,frame)=>this.onXRFrame(t,frame));
+    }catch(e){
+      alert('AR शुरू नहीं हुआ: '+e.message);
+      this.startCamera();
+    }
+  }
+  
+  setupThree(session){
+    this.renderer=new THREE.WebGLRenderer({alpha:true,premultipliedAlpha:false});
+    this.renderer.setSize(innerWidth,innerHeight);
+    this.renderer.xr.enabled=true;
+    this.renderer.domElement.style.position='fixed';
+    this.renderer.domElement.style.top='0';
+    this.renderer.domElement.style.left='0';
+    this.renderer.domElement.style.width='100%';
+    this.renderer.domElement.style.height='100%';
+    this.renderer.domElement.style.zIndex='1';
+    document.body.insertBefore(this.renderer.domElement,this.canvas2d);
+    
+    this.scene=new THREE.Scene();
+    this.camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,100);
+    
+    this.carGroup=new THREE.Group();
+    this.buildCar3D();
+    this.scene.add(this.carGroup);
+    
+    const gpGeo=new THREE.PlaneGeometry(this.gateWidth,this.gateDepth);
+    const gpMat=new THREE.MeshBasicMaterial({color:0x00d4aa,wireframe:true,transparent:true,opacity:0.3});
+    this.groundPlane=new THREE.Mesh(gpGeo,gpMat);
+    this.groundPlane.rotation.x=-Math.PI/2;
+    this.groundPlane.position.set(this.gateWidth/2,0.01,this.gateDepth/2);
+    this.scene.add(this.groundPlane);
+    
+    this.renderer.xr.setSession(session);
+  }
+  
+  buildCar3D(){
+    const car=new THREE.Group();
+    const bodyGeo=new THREE.BoxGeometry(CAR.length,CAR.height,CAR.width);
+    const bodyMat=new THREE.MeshBasicMaterial({color:0xff6b00,transparent:true,opacity:0.4});
+    const body=new THREE.Mesh(bodyGeo,bodyMat);
+    body.position.y=CAR.height/2+CAR.groundClearance;
+    car.add(body);
+    
+    const wGeo=new THREE.CylinderGeometry(0.3,0.3,0.2,16);
+    const wMat=new THREE.MeshBasicMaterial({color:0x333333});
+    const wPos=[
+      [CAR.wheelbase,0.3,-CAR.trackWidth/2],
+      [CAR.wheelbase,0.3,CAR.trackWidth/2],
+      [0,0.3,-CAR.trackWidth/2],
+      [0,0.3,CAR.trackWidth/2]
+    ];
+    for(const p of wPos){
+      const w=new THREE.Mesh(wGeo,wMat);
+      w.rotation.z=Math.PI/2;
+      w.position.set(p[0],p[1],p[2]);
+      car.add(w);
+    }
+    this.carGroup.add(car);
+  }
+  
+  onXRFrame(t,frame){
+    if(!this.xrSession||this.mode!=='ar')return;
+    const session=frame.session;
+    const refSpace=this.xrRefSpace||session.renderState.baseLayer;
+    
+    if(this.hitTestSource){
+      const hits=frame.getHitTestResults(this.hitTestSource);
+      if(hits.length>0){
+        const pose=hits[0].getPose(refSpace);
+        if(pose&&!this.isCalibrated){
+          this.carGroup.position.set(
+            pose.transform.position.x,
+            pose.transform.position.y,
+            pose.transform.position.z
+          );
+        }
+      }
+    }
+    
+    if(this.carGroup){
+      this.carGroup.position.x=this.car.x;
+      this.carGroup.position.z=this.car.y;
+      this.carGroup.rotation.y=-this.car.heading;
+    }
+    
+    this.renderer.render(this.scene,this.camera);
+    session.requestAnimationFrame((t2,f2)=>this.onXRFrame(t2,f2));
+  }
+  
+  cleanupXR(){
+    if(this.renderer){
+      const el=this.renderer.domElement;
+      if(el.parentNode)el.parentNode.removeChild(el);
+      this.renderer.dispose();
+      this.renderer=null;
+    }
+    this.scene=null;
+    this.camera=null;
+    this.carGroup=null;
   }
   
   // ==================== CAMERA ====================
-  async startCamera() {
-    console.log('Starting camera...');
-    try {
-      const constraints = {
-        video: {
-          facingMode: { ideal: this.facing },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        audio: false
-      };
-      
-      console.log('Requesting getUserMedia...');
-      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('Stream obtained');
-      
-      this.video.srcObject = this.stream;
+  async startCamera(){
+    try{
+      const c={video:{facingMode:{ideal:this.facing},width:{ideal:1920},height:{ideal:1080}},audio:false};
+      this.stream=await navigator.mediaDevices.getUserMedia(c);
+      this.video.srcObject=this.stream;
       await this.video.play();
-      console.log('Video playing');
-      
+      this.mode='camera';
       this.enterApp('कैमरा चालू');
-      
-      document.getElementById('dp').innerHTML = '<span class="ok">मिली</span>';
-      document.getElementById('dt').innerHTML = '<span class="ok">चालू</span>';
-      document.getElementById('df').textContent = this.facing === 'environment' ? 'पिछला' : 'आगे';
-      
-      setTimeout(() => {
-        this.updateVideoSize();
-        this.openCalib();
-      }, 600);
-      
-    } catch (err) {
-      console.error('Camera error:', err);
-      document.getElementById('dp').innerHTML = `<span class="err">${err.name}</span>`;
-      alert('❌ कैमरा एक्सेस नहीं मिला:\n' + err.message + '\n\nकारण:\n• HTTPS/localhost पर खोलें\n• Permission दें\n• या "फोटो/वीडियो" चुनें');
+      document.getElementById('dp').innerHTML='<span class="o">मिली</span>';
+      document.getElementById('dt').innerHTML='<span class="o">चालू</span>';
+      document.getElementById('df').textContent=this.facing==='environment'?'पिछला':'आगे';
+      document.getElementById('dm').textContent='कैमरा ओवरले';
+      setTimeout(()=>{this.updateSize();this.openCalib();},600);
+    }catch(e){
+      document.getElementById('dp').innerHTML=`<span class="x">${e.name}</span>`;
+      alert('कैमरा नहीं मिला: '+e.message);
     }
   }
   
-  updateVideoSize() {
-    if (this.video.videoWidth) {
-      document.getElementById('dz').textContent = `${this.video.videoWidth}×${this.video.videoHeight}`;
+  updateSize(){
+    if(this.video.videoWidth){
+      document.getElementById('dz').textContent=`${this.video.videoWidth}×${this.video.videoHeight}`;
     }
   }
   
-  async switchCamera() {
-    if (!this.stream) return;
-    this.facing = this.facing === 'environment' ? 'user' : 'environment';
-    this.stream.getTracks().forEach(t => t.stop());
+  async switchCamera(){
+    if(!this.stream)return;
+    this.facing=this.facing==='environment'?'user':'environment';
+    this.stream.getTracks().forEach(t=>t.stop());
     await this.startCamera();
   }
   
-  stopCamera() {
-    if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
-      this.stream = null;
+  stopAll(){
+    if(this.stream){
+      this.stream.getTracks().forEach(t=>t.stop());
+      this.stream=null;
     }
-    this.video.srcObject = null;
-    document.getElementById('dt').innerHTML = '<span class="err">बंद</span>';
+    this.video.srcObject=null;
+    if(this.xrSession){
+      this.xrSession.end();
+      this.xrSession=null;
+    }
+    this.cleanupXR();
   }
   
-  enterApp(mode) {
-    document.getElementById('ss').style.display = 'none';
-    this.video.style.display = 'block';
-    document.getElementById('top').style.display = 'flex';
-    document.getElementById('pill').classList.add('show');
-    document.getElementById('f1').style.display = 'flex';
-    document.getElementById('f2').style.display = 'flex';
-    document.getElementById('f3').style.display = 'flex';
-    this.canvas.classList.add('on');
-    document.getElementById('sg').textContent = this.gateW.toFixed(2) + ' m';
+  enterApp(m){
+    document.getElementById('ss').style.display='none';
+    this.video.style.display='block';
+    document.getElementById('top').style.display='flex';
+    document.getElementById('pill').classList.add('s');
+    document.getElementById('f1').style.display='flex';
+    document.getElementById('f2').style.display='flex';
+    document.getElementById('f3').style.display='flex';
+    this.canvas2d.classList.add('on');
+    document.getElementById('sg').textContent=this.gateWidth.toFixed(2)+' m';
   }
   
-  usePhoto() {
-    document.getElementById('ss').style.display = 'none';
-    document.getElementById('fb').classList.add('show');
+  usePhoto(){
+    document.getElementById('ss').style.display='none';
+    document.getElementById('fb').classList.add('s');
+    this.mode='photo';
     this.enterApp('फोटो मोड');
     document.getElementById('fi').click();
   }
   
-  handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const img = document.getElementById('fbi');
-    const vid = document.getElementById('fbv');
-    if (file.type.startsWith('video')) {
-      img.style.display = 'none';
-      vid.style.display = 'block';
-      vid.src = url;
-      vid.play();
-    } else {
-      vid.style.display = 'none';
-      img.style.display = 'block';
-      img.src = url;
+  handleFile(e){
+    const f=e.target.files[0];
+    if(!f)return;
+    const u=URL.createObjectURL(f);
+    const i=document.getElementById('fbi'),v=document.getElementById('fbv');
+    if(f.type.startsWith('video')){
+      i.style.display='none';
+      v.style.display='block';
+      v.src=u;
+      v.play();
+    }else{
+      v.style.display='none';
+      i.style.display='block';
+      i.src=u;
     }
-    setTimeout(() => this.openCalib(), 500);
+    setTimeout(()=>this.openCalib(),500);
   }
   
   // ==================== UI ====================
-  openSheet() { document.getElementById('sheet').classList.add('open'); }
-  closeSheet() { document.getElementById('sheet').classList.remove('open'); }
-  
-  openCalib() {
-    this.isCalibrating = true;
-    this.calibPts = [];
-    this.homography = null;
-    this.invH = null;
-    this.isCalibrated = false;
-    document.getElementById('cm').classList.add('show');
+  openSheet(){document.getElementById('sheet').classList.add('o');}
+  closeSheet(){document.getElementById('sheet').classList.remove('o');}
+  openCalib(){
+    this.isCalibrating=true;
+    this.calibPts=[];
+    this.groundH=null;
+    this.invGroundH=null;
+    this.isCalibrated=false;
+    document.getElementById('cm').classList.add('s');
     this.updateCalibHint();
   }
-  
-  closeCalib() {
-    this.isCalibrating = false;
-    document.getElementById('cm').classList.remove('show');
+  closeCalib(){
+    this.isCalibrating=false;
+    document.getElementById('cm').classList.remove('s');
   }
-  
-  openRamp() {
+  openRamp(){
     this.updateRamp();
-    document.getElementById('rm').classList.add('show');
+    document.getElementById('rm').classList.add('s');
   }
-  
-  closeRamp() {
-    document.getElementById('rm').classList.remove('show');
+  closeRamp(){
+    document.getElementById('rm').classList.remove('s');
   }
-  
-  toggleDebug() {
-    document.getElementById('db').classList.toggle('show');
+  toggleDebug(){
+    document.getElementById('db').classList.toggle('s');
   }
-  
-  showInst(txt) {
-    const el = document.getElementById('ins');
-    el.textContent = txt;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 2000);
+  showInst(t){
+    const el=document.getElementById('ins');
+    el.textContent=t;
+    el.classList.add('s');
+    setTimeout(()=>el.classList.remove('s'),2000);
   }
   
   // ==================== CALIBRATION ====================
-  setCalibMode(m) {
-    this.calibMode = m;
-    document.querySelectorAll('.ta').forEach((t, i) => t.classList.toggle('active', (i===0 && m===2) || (i===1 && m===4)));
-    this.calibPts = [];
+  setCalibMode(m){
+    this.calibMode=m;
+    document.querySelectorAll('.ta').forEach((t,i)=>t.classList.toggle('a',(i===0&&m===2)||(i===1&&m===4)));
+    this.calibPts=[];
     this.updateCalibHint();
   }
   
-  updateCalibHint() {
-    const el = document.getElementById('ch');
-    if (this.calibMode === 2) {
-      if (this.calibPts.length === 0) el.innerHTML = '<b>बाएं</b> पिलर पर टैप करें';
-      else if (this.calibPts.length === 1) el.innerHTML = '<b>दाएं</b> पिलर पर टैप करें';
-      else el.innerHTML = '✓ दोनों बिंदु मिल गए!';
-    } else {
-      const labels = ['बाएं-नीचे', 'दाएं-नीचे', 'दाएं-ऊपर', 'बाएं-ऊपर'];
-      if (this.calibPts.length < 4) el.innerHTML = `<b>${labels[this.calibPts.length]}</b> कोना टैप करें`;
-      else el.innerHTML = '✓ चारों बिंदु मिल गए!';
+  updateCalibHint(){
+    const el=document.getElementById('ch');
+    if(this.calibMode===2){
+      if(this.calibPts.length===0)el.innerHTML='<b>बाएं</b> गेट पिलर (जमीन) पर टैप करें';
+      else if(this.calibPts.length===1)el.innerHTML='<b>दाएं</b> गेट पिलर (जमीन) पर टैप करें';
+      else el.innerHTML='✓ दोनों बिंदु मिल गए!';
+    }else{
+      const l=['बाएं-आगे','दाएं-आगे','दाएं-पीछे','बाएं-पीछे'];
+      if(this.calibPts.length<4)el.innerHTML=`<b>${l[this.calibPts.length]}</b> जमीन कोना टैप करें`;
+      else el.innerHTML='✓ चारों बिंदु मिल गए!';
     }
   }
   
-  updateGate() {
-    const ft = parseFloat(document.getElementById('gf').value) || 7;
-    this.gateW = ft * 0.3048;
-    document.getElementById('gm').value = this.gateW.toFixed(3);
+  updateGate(){
+    this.gateWidth=parseFloat(document.getElementById('gw').value)||2.134;
+  }
+  updateDepth(){
+    this.gateDepth=parseFloat(document.getElementById('gd').value)||5;
   }
   
-  updateGateM() {
-    const m = parseFloat(document.getElementById('gm').value) || 2.134;
-    this.gateW = m;
-    document.getElementById('gf').value = (m / 0.3048).toFixed(2);
-  }
-  
-  addCalibPt(sx, sy) {
-    this.calibPts.push({x: sx, y: sy});
+  addCalibPt(sx,sy){
+    this.calibPts.push({x:sx,y:sy});
     this.updateCalibHint();
-    if (this.calibMode === 2 && this.calibPts.length === 2) {
-      const p1 = this.calibPts[0], p2 = this.calibPts[1];
-      this.ppm = Math.hypot(p2.x - p1.x, p2.y - p1.y) / this.gateW;
-      document.getElementById('dp2').textContent = this.ppm.toFixed(1);
+    if(this.calibMode===2&&this.calibPts.length===2){
+      const p1=this.calibPts[0],p2=this.calibPts[1];
+      this.ppm=Math.hypot(p2.x-p1.x,p2.y-p1.y)/this.gateWidth;
+      document.getElementById('dp2').textContent=this.ppm.toFixed(1)+' (2D)';
     }
   }
   
-  finishCalib() {
-    if (this.calibMode === 2) {
-      if (this.calibPts.length < 2) {
+  finishCalib(){
+    if(this.calibMode===2){
+      if(this.calibPts.length<2){
         this.showInst('दोनों पिलर टैप करें');
         return;
       }
-      const p1 = this.calibPts[0], p2 = this.calibPts[1];
-      this.ppm = Math.hypot(p2.x - p1.x, p2.y - p1.y) / this.gateW;
-      this.gateLine = {p1, p2};
-    } else {
-      if (this.calibPts.length < 4) {
+      const p1=this.calibPts[0],p2=this.calibPts[1];
+      this.ppm=Math.hypot(p2.x-p1.x,p2.y-p1.y)/this.gateWidth;
+      this.gateLine={p1,p2};
+    }else{
+      if(this.calibPts.length<4){
         this.showInst('चारों कोने टैप करें');
         return;
       }
-      this.homography = solveHomography(this.calibPts);
-      this.invH = invertH(this.homography);
-      const p1 = this.calibPts[0], p2 = this.calibPts[1];
-      this.ppm = Math.hypot(p2.x - p1.x, p2.y - p1.y) / this.gateW;
+      const src=this.calibPts;
+      const dst=[
+        {x:0,y:0},
+        {x:this.gateWidth,y:0},
+        {x:this.gateWidth,y:this.gateDepth},
+        {x:0,y:this.gateDepth}
+      ];
+      this.groundH=this.solveH(src,dst);
+      this.invGroundH=this.invH(this.groundH);
     }
-    this.isCalibrated = true;
-    this.isCalibrating = false;
-    document.getElementById('cm').classList.remove('show');
-    document.getElementById('dc').innerHTML = '<span class="ok">हो गया</span>';
-    document.getElementById('dp2').textContent = this.ppm.toFixed(1);
+    this.isCalibrated=true;
+    this.isCalibrating=false;
+    document.getElementById('cm').classList.remove('s');
+    document.getElementById('dc').innerHTML='<span class="o">हो गया</span>';
     this.showInst('✓ कैलिब्रेशन पूरा');
   }
   
-  resetCalib() {
-    this.calibPts = [];
-    this.homography = null;
-    this.invH = null;
-    this.isCalibrated = false;
+  resetCalib(){
+    this.calibPts=[];
+    this.groundH=null;
+    this.invGroundH=null;
+    this.isCalibrated=false;
     this.updateCalibHint();
-    document.getElementById('dc').innerHTML = '<span class="err">नहीं</span>';
+    document.getElementById('dc').innerHTML='<span class="x">नहीं</span>';
   }
   
-  worldToScreen(wx, wy) {
-    if (this.homography && this.invH) {
-      const nx = wx / this.gateW, ny = wy / (this.gateW * 2);
-      return applyH(this.homography, {x: nx, y: ny});
+  solveH(src,dst){
+    const A=[];
+    for(let i=0;i<4;i++){
+      const sx=src[i].x,sy=src[i].y,dx=dst[i].x,dy=dst[i].y;
+      A.push([sx,sy,1,0,0,0,-dx*sx,-dx*sy,-dx]);
+      A.push([0,0,0,sx,sy,1,-dy*sx,-dy*sy,-dy]);
     }
-    return {x: this.scr.x + wx * this.ppm, y: this.scr.y + wy * this.ppm};
+    for(let c=0;c<8;c++){
+      let pv=c;
+      for(let r=c;r<8;r++)if(Math.abs(A[r][c])>Math.abs(A[pv][c]))pv=r;
+      if(Math.abs(A[pv][c])<1e-12)continue;
+      [A[c],A[pv]]=[A[pv],A[c]];
+      const p=A[c][c];
+      for(let j=c;j<9;j++)A[c][j]/=p;
+      for(let r=0;r<8;r++){
+        if(r===c)continue;
+        const f=A[r][c];
+        for(let j=c;j<9;j++)A[r][j]-=f*A[c][j];
+      }
+    }
+    const h=[];
+    for(let i=0;i<8;i++)h.push(-A[i][8]);
+    h.push(1);
+    const n=Math.sqrt(h[0]*h[0]+h[3]*h[3]+h[6]*h[6]);
+    for(let i=0;i<9;i++)h[i]/=n;
+    return h;
+  }
+  
+  appH(H,pt){
+    const x=H[0]*pt.x+H[1]*pt.y+H[2];
+    const y=H[3]*pt.x+H[4]*pt.y+H[5];
+    const w=H[6]*pt.x+H[7]*pt.y+H[8];
+    return w===0?{x:0,y:0}:{x:x/w,y:y/w};
+  }
+  
+  invH(H){
+    const a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7],i=H[8];
+    const A=e*i-f*h,B=f*g-d*i,C=d*h-e*g;
+    const D=c*h-b*i,E=a*i-c*g,F=b*g-a*h;
+    const G=b*f-c*e,H2=c*d-a*f,I=a*e-b*d;
+    const det=a*A+b*B+c*C;
+    if(Math.abs(det)<1e-10)return null;
+    return[A/det,D/det,G/det,B/det,E/det,H2/det,C/det,F/det,I/det];
+  }
+  
+  screenToWorld(sx,sy){
+    if(this.groundH&&this.invGroundH){
+      return this.appH(this.invGroundH,{x:sx,y:sy});
+    }
+    if(this.gateLine){
+      const p1=this.gateLine.p1,p2=this.gateLine.p2;
+      const gdx=p2.x-p1.x,gdy=p2.y-p1.y,glen=Math.hypot(gdx,gdy);
+      const ux=gdx/glen,uy=gdy/glen;
+      const nx=-uy,ny=ux;
+      const cx=(p1.x+p2.x)/2,cy=(p1.y+p2.y)/2;
+      const dx=sx-cx,dy=sy-cy;
+      const along=(dx*ux+dy*uy)/this.ppm;
+      const depth=(dx*nx+dy*ny)/this.ppm;
+      return{x:along+this.gateWidth/2,y:depth};
+    }
+    return{x:(sx-innerWidth/2)/this.ppm,y:(sy-innerHeight*0.65)/this.ppm};
+  }
+  
+  worldToScreen(wx,wy){
+    if(this.groundH){
+      return this.appH(this.groundH,{x:wx,y:wy});
+    }
+    if(this.gateLine){
+      const p1=this.gateLine.p1,p2=this.gateLine.p2;
+      const gdx=p2.x-p1.x,gdy=p2.y-p1.y,glen=Math.hypot(gdx,gdy);
+      const ux=gdx/glen,uy=gdy/glen;
+      const nx=-uy,ny=ux;
+      const cx=(p1.x+p2.x)/2,cy=(p1.y+p2.y)/2;
+      const along=(wx-this.gateWidth/2)*this.ppm;
+      const depth=wy*this.ppm;
+      return{x:cx+along*ux+depth*nx,y:cy+along*uy+depth*ny};
+    }
+    return{x:innerWidth/2+wx*this.ppm,y:innerHeight*0.65+wy*this.ppm};
   }
   
   // ==================== INPUT ====================
-  getPos(e) {
-    const r = this.canvas.getBoundingClientRect();
-    const cx = e.touches ? e.touches[0].clientX : e.clientX;
-    const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    return {x: cx - r.left, y: cy - r.top};
+  getPos(e){
+    const r=this.canvas2d.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:cx-r.left,y:cy-r.top};
   }
   
-  overCar(x, y) {
-    const dx = x - this.scr.x, dy = y - this.scr.y;
-    const lp = CAR.length * this.ppm * 0.5 + 30;
-    const wp = CAR.width * this.ppm * 0.5 + 30;
-    const r = this.scr.r * Math.PI / 180;
-    const lx = dx * Math.cos(-r) - dy * Math.sin(-r);
-    const ly = dx * Math.sin(-r) + dy * Math.cos(-r);
-    return Math.abs(lx) < lp && Math.abs(ly) < wp;
+  overCar(x,y){
+    const corners=this.car.getCorners().body;
+    const s=corners.map(p=>this.worldToScreen(p.x,p.y));
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    for(const p of s){
+      minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+      minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);
+    }
+    return x>=minX-20&&x<=maxX+20&&y>=minY-20&&y<=maxY+20;
   }
   
-  onTouchStart(e) {
-    if (this.isCalibrating) {
+  ts(e){
+    if(this.isCalibrating){
       e.preventDefault();
-      const p = this.getPos(e);
-      this.addCalibPt(p.x, p.y);
+      const p=this.getPos(e);
+      this.addCalibPt(p.x,p.y);
       return;
     }
-    if (e.touches.length === 1) {
-      const p = this.getPos(e);
-      if (this.overCar(p.x, p.y)) {
-        this.drag = true;
-        this.drag0 = {x: p.x, y: p.y, cx: this.scr.x, cy: this.scr.y};
+    if(e.touches.length===1){
+      const p=this.getPos(e);
+      if(this.overCar(p.x,p.y)){
+                this.drag=true;
+        this.drag0={x:p.x,y:p.y,cx:this.car.x,cy:this.car.y};
       }
-    } else if (e.touches.length === 2) {
-      this.rotating = true;
-      this.drag = false;
-      const t1 = e.touches[0], t2 = e.touches[1];
-      this.lastDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      this.lastAngle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
-      this.rot0 = this.scr.r;
+    }else if(e.touches.length===2){
+      this.rotating=true;
+      this.drag=false;
+      const t1=e.touches[0],t2=e.touches[1];
+      this.lastAngle=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);
+      this.rot0=this.car.heading;
     }
   }
   
-  onTouchMove(e) {
+  tm(e){
     e.preventDefault();
-    if (this.drag && e.touches.length === 1) {
-      const p = this.getPos(e);
-      this.scr.x = this.drag0.cx + (p.x - this.drag0.x);
-      this.scr.y = this.drag0.cy + (p.y - this.drag0.y);
-      this.syncCar();
-    } else if (this.rotating && e.touches.length === 2) {
-      const t1 = e.touches[0], t2 = e.touches[1];
-      const a = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
-      this.scr.r = this.rot0 + (a - this.lastAngle) * 180 / Math.PI;
-      this.car.heading = this.scr.r * Math.PI / 180;
+    if(this.drag&&e.touches.length===1){
+      const p=this.getPos(e);
+      const dx=(p.x-this.drag0.x)/this.ppm;
+      const dy=(p.y-this.drag0.y)/this.ppm;
+      this.car.x=this.drag0.cx+dx;
+      this.car.y=this.drag0.cy+dy;
+    }else if(this.rotating&&e.touches.length===2){
+      const t1=e.touches[0],t2=e.touches[1];
+      const a=Math.atan2(t2.clientY-t1.clientY,t2.clientX-t1.clientX);
+      this.car.heading=this.rot0+(a-this.lastAngle);
+      while(this.car.heading>Math.PI)this.car.heading-=2*Math.PI;
+      while(this.car.heading<-Math.PI)this.car.heading+=2*Math.PI;
     }
   }
   
-  onTouchEnd(e) {
-    this.drag = false;
-    this.rotating = false;
+  te(e){
+    this.drag=false;
+    this.rotating=false;
   }
   
-  onMouseDown(e) {
-    if (this.isCalibrating) {
-      const p = this.getPos(e);
-      this.addCalibPt(p.x, p.y);
+  md(e){
+    if(this.isCalibrating){
+      const p=this.getPos(e);
+      this.addCalibPt(p.x,p.y);
       return;
     }
-    const p = this.getPos(e);
-    if (this.overCar(p.x, p.y)) {
-      this.drag = true;
-      this.drag0 = {x: p.x, y: p.y, cx: this.scr.x, cy: this.scr.y};
+    const p=this.getPos(e);
+    if(this.overCar(p.x,p.y)){
+      this.drag=true;
+      this.drag0={x:p.x,y:p.y,cx:this.car.x,cy:this.car.y};
     }
   }
   
-  onMouseMove(e) {
-    if (!this.drag) return;
-    const p = this.getPos(e);
-    this.scr.x = this.drag0.cx + (p.x - this.drag0.x);
-    this.scr.y = this.drag0.cy + (p.y - this.drag0.y);
-    this.syncCar();
+  mm(e){
+    if(!this.drag)return;
+    const p=this.getPos(e);
+    const dx=(p.x-this.drag0.x)/this.ppm;
+    const dy=(p.y-this.drag0.y)/this.ppm;
+    this.car.x=this.drag0.cx+dx;
+    this.car.y=this.drag0.cy+dy;
   }
   
-  onMouseUp(e) {
-    this.drag = false;
-  }
-  
-  syncCar() {
-    this.car.x = 0;
-    this.car.y = 0;
+  mu(e){
+    this.drag=false;
   }
   
   // ==================== CONTROLS ====================
-  setSteering(v) {
-    this.car.steering = parseFloat(v);
-    document.getElementById('vs').textContent = v + '°';
-    document.getElementById('is').value = v;
+  setSteering(v){
+    this.car.steering=parseFloat(v);
+    document.getElementById('vs').textContent=v+'°';
+    document.getElementById('is').value=v;
   }
   
-  setSpeed(d) {
-    this.simSpeed = d;
-    this.car.speed = d;
-    if (d !== 0) this.syncCar();
+  setSpeed(d){
+    this.simSpeed=d;
+    this.car.speed=d;
   }
   
-  resetCar() {
-    this.scr.x = innerWidth / 2;
-    this.scr.y = innerHeight * 0.65;
-    this.scr.r = -90;
+  resetCar(){
     this.car.reset();
-    this.car.steering = parseFloat(document.getElementById('is').value);
+    this.car.steering=parseFloat(document.getElementById('is').value);
     this.showInst('गाड़ी रीसेट');
   }
   
-  togglePath() {
-    this.showPath = !this.showPath;
-    document.getElementById('f3').classList.toggle('on', this.showPath);
-    this.showInst(this.showPath ? 'पाथ चालू' : 'पाथ बंद');
+  togglePath(){
+    this.showPath=!this.showPath;
+    document.getElementById('f3').classList.toggle('on',this.showPath);
+    this.showInst(this.showPath?'पाथ चालू':'पाथ बंद');
   }
   
-  updateRamp() {
-    const h = parseInt(document.getElementById('rh').value) / 100;
-    const l = parseInt(document.getElementById('rl').value) / 100;
-    const d = parseInt(document.getElementById('rd').value) / 100;
-    const a = Math.atan(h / l) * 180 / Math.PI;
-    this.ramp = {h, l, d, a};
-    document.getElementById('rhv').textContent = (h * 100).toFixed(0) + ' cm';
-    document.getElementById('rlv').textContent = l.toFixed(1) + ' m';
-    document.getElementById('rdv').textContent = d.toFixed(1) + ' m';
-    
-    let warnings = [];
-    if (a > CAR.approachAngle * 0.8) warnings.push(`⚠️ कोण (${a.toFixed(1)}°) अप्रोच एंगल के करीब!`);
-    if (d < CAR.mirrorWidth + 0.3) warnings.push(`⚠️ ड्राइववे बहुत संकरी!`);
-    if (h > CAR.groundClearance * 0.8) warnings.push(`⚠️ ऊंचाई क्लीयरेंस के करीब!`);
-    document.getElementById('rw').innerHTML = warnings.length ? warnings.join('<br>') : '✓ सामान्य';
+  updateRamp(){
+    const h=parseInt(document.getElementById('rh').value)/100;
+    const l=parseInt(document.getElementById('rl').value)/100;
+    const d=parseInt(document.getElementById('rd').value)/100;
+    const a=Math.atan(h/l)*180/Math.PI;
+    this.ramp={h,l,d,a};
+    document.getElementById('rhv').textContent=(h*100).toFixed(0)+' cm';
+    document.getElementById('rlv').textContent=l.toFixed(1)+' m';
+    document.getElementById('rdv').textContent=d.toFixed(1)+' m';
+    let w=[];
+    if(a>CAR.approachAngle*0.8)w.push(`⚠️ कोण (${a.toFixed(1)}°) अप्रोच एंगल के करीब!`);
+    if(d<CAR.mirrorWidth+0.3)w.push(`⚠️ ड्राइववे बहुत संकरी!`);
+    if(h>CAR.groundClearance*0.8)w.push(`⚠️ ऊंचाई क्लीयरेंस के करीब!`);
+    document.getElementById('rw').innerHTML=w.length?w.join('<br>'):'✓ सामान्य';
   }
   
-  // ==================== COLLISION ====================
-  checkCollision() {
-    if (!this.isCalibrated) return null;
-    const w = this.car.corners();
-    let gl, gr;
-    if (this.calibMode === 2 && this.gateLine) {
-      gl = this.gateLine.p1; gr = this.gateLine.p2;
-    } else if (this.calibPts.length >= 2) {
-      gl = this.calibPts[0]; gr = this.calibPts[1];
-    } else return null;
+  // ==================== COLLISION (WORLD COORDS) ====================
+  checkCollision(){
+    if(!this.isCalibrated)return null;
+    const c=this.car.getCorners();
+    const gateLeft={x:0,y:0};
+    const gateRight={x:this.gateWidth,y:0};
+    const gateTop={x:this.gateWidth,y:this.gateDepth};
+    const gateBottom={x:0,y:this.gateDepth};
     
-    const body = w.body.map(p => this.worldToScreen(p.x, p.y));
-    const mirrors = w.mirrors.map(p => this.worldToScreen(p.x, p.y));
-    const all = [...body, ...mirrors];
+    const all=[...c.body,...c.mirrors];
+    let minGap=Infinity;
+    let leftGap=Infinity;
+    let rightGap=Infinity;
     
-    const gdx = gr.x - gl.x, gdy = gr.y - gl.y;
-    const glen = Math.hypot(gdx, gdy);
-    if (glen < 1) return null;
-    
-    const A = gdy, B = -gdx, C = gdx * gl.y - gdy * gl.x;
-    const den = Math.hypot(A, B);
-    const dists = all.map(p => Math.abs(A * p.x + B * p.y + C) / den);
-    const minD = Math.min(...dists);
-    const minM = minD / this.ppm;
-    
-    const ux = gdx / glen, uy = gdy / glen;
-    let mn = Infinity, mx = -Infinity;
-    for (const p of all) {
-      const along = (p.x - gl.x) * ux + (p.y - gl.y) * uy;
-      mn = Math.min(mn, along); mx = Math.max(mx, along);
+    for(const p of all){
+      const dx=p.x-gateLeft.x;
+      const toRight=gateRight.x-p.x;
+      const toTop=gateTop.y-p.y;
+      const toBottom=p.y-gateBottom.y;
+      
+      if(p.y>0&&p.y<this.gateDepth){
+        if(p.x<gateLeft.x)leftGap=Math.min(leftGap,gateLeft.x-p.x);
+        if(p.x>gateRight.x)rightGap=Math.min(rightGap,p.x-gateRight.x);
+      }
+      
+      const dLeft=Math.abs(dx);
+      const dRight=Math.abs(toRight);
+      const dTop=Math.abs(toTop);
+      const dBottom=Math.abs(toBottom);
+      minGap=Math.min(minGap,dLeft,dRight,dTop,dBottom);
     }
-    const left = Math.max(0, mn / this.ppm);
-    const right = Math.max(0, (glen - mx) / this.ppm);
     
-    return {gate: this.gateW, body: CAR.width, mirror: CAR.mirrorWidth, left, right, min: minM};
+    return{
+      gate:this.gateWidth,
+      body:CAR.width,
+      mirror:CAR.mirrorWidth,
+      left:Math.max(0,leftGap),
+      right:Math.max(0,rightGap),
+      min:Math.max(0,minGap)
+    };
   }
   
-  updateInfo(c) {
-    if (!c) {
-      document.getElementById('pg').textContent = this.gateW.toFixed(2) + 'm';
-      document.getElementById('pb').textContent = CAR.width.toFixed(2) + 'm';
-      document.getElementById('pm').textContent = CAR.mirrorWidth.toFixed(2) + 'm';
-      document.getElementById('pn').textContent = '—';
+  updateInfo(c){
+    if(!c){
+      document.getElementById('pg').textContent=this.gateWidth.toFixed(2)+'m';
+      document.getElementById('pb').textContent=CAR.width.toFixed(2)+'m';
+      document.getElementById('pm').textContent=CAR.mirrorWidth.toFixed(2)+'m';
+      document.getElementById('pn').textContent='—';
       return;
     }
-    const set = (id, v, cls) => {
-      const el = document.getElementById(id);
-      el.textContent = typeof v === 'number' ? v.toFixed(2) + 'm' : v;
-      el.className = 'n ' + (cls || '');
+    const set=(id,v,cls)=>{
+      const el=document.getElementById(id);
+      el.textContent=typeof v==='number'?v.toFixed(2)+'m':v;
+      el.className='n '+(cls||'');
     };
-    set('pg', c.gate);
-    set('pb', c.body);
-    set('pm', c.mirror);
-    const mc = c.min < 0.10 ? 'danger' : c.min < 0.25 ? 'warn' : 'ok';
-    set('pn', Math.max(0, c.min), mc);
+    set('pg',c.gate);
+    set('pb',c.body);
+    set('pm',c.mirror);
+    const mc=c.min<0.10?'x':c.min<0.25?'w':'o';
+    set('pn',c.min,mc);
     
-    const t = document.getElementById('toast');
-    if (c.min < 0.05) {
-      t.textContent = '🚨 टक्कर का खतरा!';
-      t.className = 'danger show';
-    } else if (c.min < 0.20) {
-      t.textContent = '⚠️ बहुत तंग!';
-      t.className = 'warn show';
-    } else if (c.min < 0.40) {
-      t.textContent = '✓ फिट हो सकती है';
-      t.className = 'ok show';
-    } else {
-      t.className = '';
-      t.style.display = 'none';
-    }
+    const t=document.getElementById('toast');
+    if(c.min<0.05){t.textContent='🚨 टक्कर का खतरा!';t.className='x s';}
+    else if(c.min<0.20){t.textContent='⚠️ बहुत तंग!';t.className='w s';}
+    else if(c.min<0.40){t.textContent='✓ फिट हो सकती है';t.className='o s';}
+    else{t.className='';t.style.display='none';}
   }
   
   // ==================== RENDER ====================
-  loop(ts) {
-    const dt = Math.min((ts - this.lastT) / 1000, 0.05);
-    this.lastT = ts;
+  loop(ts){
+    if(this.mode==='ar')return;
+    const dt=Math.min((ts-this.lastT)/1000,0.05);
+    this.lastT=ts;
     this.frameCount++;
     
-    if (Math.abs(this.simSpeed) > 0.01) {
+    if(Math.abs(this.simSpeed)>0.01){
       this.car.update(dt);
-      this.scr.r = this.car.heading * 180 / Math.PI;
-      this.scr.x += this.car.speed * 2.5 * dt * this.ppm * Math.cos(this.car.heading);
-      this.scr.y += this.car.speed * 2.5 * dt * this.ppm * Math.sin(this.car.heading);
-    } else {
-      this.car.heading = this.scr.r * Math.PI / 180;
-      this.car.x = 0;
-      this.car.y = 0;
     }
     
-    const X = this.ctx;
-    const W = innerWidth, H = innerHeight;
-    X.clearRect(0, 0, W, H);
+    const X=this.ctx;
+    const W=innerWidth,H=innerHeight;
+    X.clearRect(0,0,W,H);
     
     this.drawCalib(X);
-    if (this.showPath) this.drawPath(X);
+    if(this.showPath)this.drawPath(X);
     this.drawCar(X);
-    if (this.rampOn) this.drawRamp(X);
+    if(this.rampOn)this.drawRamp(X);
     
-    if (this.frameCount % 6 === 0) {
-      const col = this.checkCollision();
+    if(this.frameCount%6===0){
+      const col=this.checkCollision();
       this.updateInfo(col);
     }
-    requestAnimationFrame(t => this.loop(t));
+    requestAnimationFrame(t=>this.loop(t));
   }
   
-  drawCalib(X) {
-    for (let i = 0; i < this.calibPts.length; i++) {
-      const p = this.calibPts[i];
+  drawCalib(X){
+    for(let i=0;i<this.calibPts.length;i++){
+      const p=this.calibPts[i];
       X.beginPath();
-      X.arc(p.x, p.y, 14, 0, Math.PI * 2);
-      X.fillStyle = i < 2 ? C.gatePost : C.gate;
+      X.arc(p.x,p.y,14,0,Math.PI*2);
+      X.fillStyle=i<2?'#ff3333':'#00d4aa';
       X.fill();
-      X.strokeStyle = '#fff';
-      X.lineWidth = 2.5;
+      X.strokeStyle='#fff';
+      X.lineWidth=2.5;
       X.stroke();
-      X.fillStyle = '#fff';
-      X.font = 'bold 13px sans-serif';
-      X.textAlign = 'center';
-      X.textBaseline = 'middle';
-      X.fillText(i + 1, p.x, p.y);
+      X.fillStyle='#fff';
+      X.font='bold 13px sans-serif';
+      X.textAlign='center';
+      X.textBaseline='middle';
+      X.fillText(i+1,p.x,p.y);
     }
-    if (this.calibPts.length >= 2) {
+    if(this.calibPts.length>=2){
       X.beginPath();
-      X.moveTo(this.calibPts[0].x, this.calibPts[0].y);
-      for (let i = 1; i < this.calibPts.length; i++) {
-        X.lineTo(this.calibPts[i].x, this.calibPts[i].y);
-      }
-      if (this.calibMode === 4 && this.calibPts.length === 4) X.closePath();
-      X.strokeStyle = C.gate;
-      X.lineWidth = 4;
-      X.setLineDash([10, 5]);
+      X.moveTo(this.calibPts[0].x,this.calibPts[0].y);
+      for(let i=1;i<this.calibPts.length;i++)X.lineTo(this.calibPts[i].x,this.calibPts[i].y);
+      if(this.calibMode===4&&this.calibPts.length===4)X.closePath();
+      X.strokeStyle='#00d4aa';
+      X.lineWidth=4;
+      X.setLineDash([10,5]);
       X.stroke();
       X.setLineDash([]);
       
-      const p1 = this.calibPts[0], p2 = this.calibPts[1];
-      X.fillStyle = C.gate;
-      X.font = 'bold 13px sans-serif';
-      X.textAlign = 'center';
-      X.fillText(`${this.gateW.toFixed(2)}m (${(this.gateW/0.3048).toFixed(1)}ft)`, (p1.x+p2.x)/2, (p1.y+p2.y)/2 - 12);
+      const p1=this.calibPts[0],p2=this.calibPts[1];
+      X.fillStyle='#00d4aa';
+      X.font='bold 13px sans-serif';
+      X.textAlign='center';
+      X.fillText(`${this.gateWidth.toFixed(2)}m × ${this.gateDepth.toFixed(1)}m`,(p1.x+p2.x)/2,(p1.y+p2.y)/2-12);
     }
   }
   
-  drawPath(X) {
-    if (Math.abs(this.car.steering) < 0.5) return;
-    const pred = this.car.predict(this.car.steering, 60, 0.05);
-    const env = this.car.envelope(pred);
-    if (env.length < 2) return;
+  drawPath(X){
+    if(Math.abs(this.car.steering)<0.5)return;
+    const pred=this.car.predict(this.car.steering,80,0.05);
+    const env=this.car.envelope(pred);
+    if(env.length<2)return;
     
-    let pc = C.pathSafe;
-    const col = this.checkCollision();
-    if (col) {
-      if (col.min < 0.10) pc = C.pathDanger;
-      else if (col.min < 0.25) pc = C.pathWarn;
+    let pc='rgba(0,212,170,0.6)';
+    const col=this.checkCollision();
+    if(col){
+      if(col.min<0.10)pc='rgba(255,51,51,0.6)';
+      else if(col.min<0.25)pc='rgba(255,170,0,0.6)';
     }
     
-    // Center line
     X.beginPath();
-    for (let i = 0; i < pred.length; i++) {
-      const p = this.worldToScreen(pred[i].x - this.car.x, pred[i].y - this.car.y);
-      if (i === 0) X.moveTo(p.x, p.y);
-      else X.lineTo(p.x, p.y);
+    for(let i=0;i<pred.length;i++){
+      const p=this.worldToScreen(pred[i].x,pred[i].y);
+      if(i===0)X.moveTo(p.x,p.y);
+      else X.lineTo(p.x,p.y);
     }
-    X.strokeStyle = pc;
-    X.lineWidth = 4;
+    X.strokeStyle=pc;
+    X.lineWidth=4;
     X.stroke();
     
-    // Envelope
-    for (let i = 0; i < env.length - 1; i++) {
-      const f1 = env[i], f2 = env[i+1];
-      for (let j = 0; j < f1.length; j++) {
-        const s1 = this.worldToScreen(f1[j].x - this.car.x, f1[j].y - this.car.y);
-        const s2 = this.worldToScreen(f2[j].x - this.car.x, f2[j].y - this.car.y);
+    for(let i=0;i<env.length-1;i++){
+      const f1=env[i],f2=env[i+1];
+      for(let j=0;j<f1.length;j++){
+        const s1=this.worldToScreen(f1[j].x,f1[j].y);
+        const s2=this.worldToScreen(f2[j].x,f2[j].y);
         X.beginPath();
-        X.moveTo(s1.x, s1.y);
-        X.lineTo(s2.x, s2.y);
-        X.strokeStyle = pc.replace('0.5', '0.25').replace('0.55', '0.25');
-        X.lineWidth = 2;
+        X.moveTo(s1.x,s1.y);
+        X.lineTo(s2.x,s2.y);
+        X.strokeStyle=pc.replace('0.6','0.2');
+        X.lineWidth=2;
         X.stroke();
       }
     }
     
-    // ICR
-    const sr = this.car.steering * Math.PI / 180;
-    if (Math.abs(sr) > 0.01) {
-      const R = CAR.wheelbase / Math.tan(sr);
-      const icrx = this.car.x - R * Math.sin(this.car.heading);
-      const icry = this.car.y + R * Math.cos(this.car.heading);
-      const sp = this.worldToScreen(icrx - this.car.x, icry - this.car.y);
+    const sr=this.car.steering*Math.PI/180;
+    if(Math.abs(sr)>0.01){
+      const R=CAR.wheelbase/Math.tan(sr);
+      const icrx=this.car.x-R*Math.sin(this.car.heading);
+      const icry=this.car.y+R*Math.cos(this.car.heading);
+      const sp=this.worldToScreen(icrx,icry);
       X.beginPath();
-      X.arc(sp.x, sp.y, 8, 0, Math.PI * 2);
-      X.fillStyle = 'rgba(255,255,255,0.7)';
+      X.arc(sp.x,sp.y,8,0,Math.PI*2);
+      X.fillStyle='rgba(255,255,255,0.7)';
       X.fill();
-      X.strokeStyle = '#fff';
-      X.lineWidth = 1.5;
+      X.strokeStyle='#fff';
+      X.lineWidth=1.5;
       X.stroke();
-      X.fillStyle = '#fff';
-      X.font = '11px sans-serif';
-      X.textAlign = 'center';
-      X.fillText('ICR', sp.x, sp.y - 12);
+      X.fillStyle='#fff';
+      X.font='11px sans-serif';
+      X.textAlign='center';
+      X.fillText('ICR',sp.x,sp.y-12);
     }
   }
   
-  drawCar(X) {
-    const cx = this.scr.x, cy = this.scr.y;
-    const sc = this.scr.sc * this.ppm / 100;
-    const rt = this.scr.r * Math.PI / 180;
+  drawCar(X){
+    const corners=this.car.getCorners();
+    const body=corners.body.map(p=>this.worldToScreen(p.x,p.y));
+    const mirrors=corners.mirrors.map(p=>this.worldToScreen(p.x,p.y));
+    const wheels=corners.wheels.map(p=>this.worldToScreen(p.x,p.y));
     
-    X.save();
-    X.translate(cx, cy);
-    X.rotate(rt);
-    X.scale(sc, sc);
+    if(body.length<4)return;
     
-    const Lf = (CAR.frontOverhang + CAR.wheelbase) * 100;
-    const Lr = CAR.rearOverhang * 100;
-    const W2 = (CAR.width / 2) * 100;
-    const M2 = (CAR.mirrorWidth / 2) * 100;
-    const WB = CAR.wheelbase * 100;
-    const TW2 = (CAR.trackWidth / 2) * 100;
-    const WR = 32;
-    
-    // Body
     X.beginPath();
-    X.moveTo(Lf, -W2 + 10);
-    X.lineTo(Lf - 20, -W2);
-    X.lineTo(-Lr, -W2);
-    X.lineTo(-Lr - 15, -W2 + 10);
-    X.lineTo(-Lr - 15, W2 - 10);
-    X.lineTo(-Lr, W2);
-    X.lineTo(Lf - 20, W2);
-    X.lineTo(Lf, W2 - 10);
+    X.moveTo(body[0].x,body[0].y);
+    for(let i=1;i<body.length;i++)X.lineTo(body[i].x,body[i].y);
     X.closePath();
-    X.fillStyle = C.body;
+    X.fillStyle='rgba(255,107,0,0.28)';
     X.fill();
-    X.strokeStyle = C.stroke;
-    X.lineWidth = 2.5;
+    X.strokeStyle='#ff6b00';
+    X.lineWidth=2.5;
     X.stroke();
     
-    // Windshield
     X.beginPath();
-    X.moveTo(Lf - 60, -W2 + 5);
-    X.lineTo(Lf - 60, W2 - 5);
-    X.lineTo(Lf - 20, W2 - 8);
-    X.lineTo(Lf - 20, -W2 + 8);
-    X.closePath();
-    X.fillStyle = C.glass;
-    X.fill();
-    
-    // Rear window
-    X.beginPath();
-    X.moveTo(-Lr + 10, -W2 + 5);
-    X.lineTo(-Lr + 10, W2 - 5);
-    X.lineTo(-Lr + 40, W2 - 8);
-    X.lineTo(-Lr + 40, -W2 + 8);
-    X.closePath();
-        X.fillStyle = C.glass;
-    X.fill();
-    
-    // Side windows
-    X.beginPath();
-    X.moveTo(Lf - 65, -W2 + 8);
-    X.lineTo(Lf - 65, W2 - 8);
-    X.lineTo(-Lr + 45, W2 - 8);
-    X.lineTo(-Lr + 45, -W2 + 8);
-    X.closePath();
-    X.fillStyle = 'rgba(100,180,255,0.08)';
-    X.fill();
-    X.strokeStyle = 'rgba(255,255,255,0.15)';
-    X.lineWidth = 1;
+    X.moveTo(mirrors[0].x,mirrors[0].y);
+    X.lineTo(mirrors[1].x,mirrors[1].y);
+    X.strokeStyle='rgba(255,200,0,0.5)';
+    X.lineWidth=3;
     X.stroke();
     
-    // Mirrors
-    X.beginPath();
-    X.moveTo(30, -W2);
-    X.lineTo(30, -M2);
-    X.lineTo(50, -M2);
-    X.lineTo(50, -W2);
-    X.moveTo(30, W2);
-    X.lineTo(30, M2);
-    X.lineTo(50, M2);
-    X.lineTo(50, W2);
-    X.fillStyle = C.mirror;
-    X.fill();
-    X.strokeStyle = '#ffaa00';
-    X.lineWidth = 1.5;
-    X.stroke();
-    
-    // Wheels
-    const wheelPos = [[WB, -TW2], [WB, TW2], [0, -TW2], [0, TW2]];
-    for (const w of wheelPos) {
+    for(const m of mirrors){
       X.beginPath();
-      X.arc(w[0], w[1], WR, 0, Math.PI * 2);
-      X.fillStyle = C.wheel;
-      X.fill();
-      X.strokeStyle = '#444';
-      X.lineWidth = 2;
-      X.stroke();
-      X.beginPath();
-      X.arc(w[0], w[1], 10, 0, Math.PI * 2);
-      X.fillStyle = '#666';
+      X.arc(m.x,m.y,6,0,Math.PI*2);
+      X.fillStyle='rgba(255,200,0,0.6)';
       X.fill();
     }
     
-    // Steering indicator on front wheels
-    const sr = this.car.steering * Math.PI / 180;
-    for (const side of [-1, 1]) {
-      X.save();
-      X.translate(WB, side * TW2);
-      X.rotate(sr);
+    for(const w of wheels){
       X.beginPath();
-      X.moveTo(-18, 0);
-      X.lineTo(18, 0);
-      X.strokeStyle = C.safe;
-      X.lineWidth = 3;
+      X.arc(w.x,w.y,8,0,Math.PI*2);
+      X.fillStyle='#2a2a2a';
+      X.fill();
+      X.strokeStyle='#555';
+      X.lineWidth=2;
       X.stroke();
-      X.restore();
+      X.beginPath();
+      X.arc(w.x,w.y,3,0,Math.PI*2);
+      X.fillStyle='#666';
+      X.fill();
     }
     
-    // Labels
-    X.fillStyle = '#fff';
-    X.font = 'bold 12px sans-serif';
-    X.textAlign = 'center';
-    X.fillText('TATA PUNCH', 15, 0);
-    X.font = '10px sans-serif';
-    X.fillText(`${CAR.length}m × ${CAR.width}m`, 15, 14);
-    
-    // Ground clearance indicator
-    X.beginPath();
-    X.moveTo(-Lr + 20, W2 + 18);
-    X.lineTo(Lf - 20, W2 + 18);
-    X.strokeStyle = 'rgba(0,212,170,0.5)';
-    X.lineWidth = 1;
-    X.setLineDash([4, 4]);
-    X.stroke();
-    X.setLineDash([]);
-    X.fillStyle = C.safe;
-    X.font = '9px sans-serif';
-    X.fillText(`GC: ${(CAR.groundClearance * 100).toFixed(0)}mm`, 15, W2 + 30);
-    
-    X.restore();
+    const cx=(body[0].x+body[2].x)/2;
+    const cy=(body[0].y+body[2].y)/2;
+    X.fillStyle='#fff';
+    X.font='bold 11px sans-serif';
+    X.textAlign='center';
+    X.fillText('TATA PUNCH',cx,cy);
+    X.font='9px sans-serif';
+    X.fillText(`${CAR.length}m × ${CAR.width}m`,cx,cy+12);
   }
   
-  drawRamp(X) {
-    const W = innerWidth;
-    X.fillStyle = 'rgba(255,170,0,0.06)';
-    X.fillRect(W - 130, 70, 120, 110);
-    X.strokeStyle = 'rgba(255,170,0,0.25)';
-    X.lineWidth = 1;
-    X.strokeRect(W - 130, 70, 120, 110);
-    X.fillStyle = '#ffaa00';
-    X.font = '11px sans-serif';
-    X.textAlign = 'left';
-    X.fillText('🚧 रैंप मोड', W - 125, 90);
-    X.fillStyle = '#777';
-    X.font = '10px sans-serif';
-    X.fillText(`ऊंचाई: ${(this.ramp.h * 100).toFixed(0)}cm`, W - 125, 108);
-    X.fillText(`लंबाई: ${this.ramp.l.toFixed(1)}m`, W - 125, 124);
-    X.fillText(`कोण: ${this.ramp.a.toFixed(1)}°`, W - 125, 140);
-    X.fillText(`ड्राइववे: ${this.ramp.d.toFixed(1)}m`, W - 125, 156);
-    if (this.deviceSlope !== null) {
-      X.fillText(`फोन झुकाव: ${this.deviceSlope.toFixed(1)}°`, W - 125, 172);
+  drawRamp(X){
+    const W=innerWidth;
+    X.fillStyle='rgba(255,170,0,0.06)';
+    X.fillRect(W-130,70,120,110);
+    X.strokeStyle='rgba(255,170,0,0.25)';
+    X.lineWidth=1;
+    X.strokeRect(W-130,70,120,110);
+    X.fillStyle='#ffaa00';
+    X.font='11px sans-serif';
+    X.textAlign='left';
+    X.fillText('🚧 रैंप मोड',W-125,90);
+    X.fillStyle='#777';
+    X.font='10px sans-serif';
+    X.fillText(`ऊंचाई: ${(this.ramp.h*100).toFixed(0)}cm`,W-125,108);
+    X.fillText(`लंबाई: ${this.ramp.l.toFixed(1)}m`,W-125,124);
+    X.fillText(`कोण: ${this.ramp.a.toFixed(1)}°`,W-125,140);
+    X.fillText(`ड्राइववे: ${this.ramp.d.toFixed(1)}m`,W-125,156);
+    if(this.deviceSlope!==null){
+      X.fillText(`फोन झुकाव: ${this.deviceSlope.toFixed(1)}°`,W-125,172);
     }
   }
 }
 
-const app = new App();
+const app=new App();
 </script>
 </body>
 </html>
